@@ -143,7 +143,9 @@ for gm in pgn:
     game_text = chess.pgn.read_game(pgn)
     board = chess.Board(chess.STARTING_FEN)
     try:
-        tournament = game_text.headers["Event"] + 50*' ' # not pulling event?
+        tmnt_s = gm.find('"') + 1
+        tmnt_e = gm.find('"', tmnt_s)
+        tournament = gm[tmnt_s:tmnt_e] + 50*' '
         tournament = tournament[0:50]
     except:
         tournament = 50*' '
