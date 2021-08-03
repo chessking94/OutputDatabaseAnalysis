@@ -2,6 +2,7 @@ import chess
 import chess.pgn
 import chess.engine
 import os
+import json
 import math
 import time as t
 import pyodbc as sql
@@ -36,47 +37,38 @@ def piececount(fen):
 def tbsearch(fen):
     url = 'http://tablebase.lichess.ovh/standard?fen='
     fen2 = fen.replace(' ', '_')
-    html = str(request.urlopen(url + fen2).read())
-    start = html.find('[', 1) + 1
-    end = len(html) - 1
-    data = html[start:end]
+    json_data = str(request.urlopen(url + fen2).read())
+    json_data = request.urlopen(url + fen2).read()
+    tb_results = json.loads(json_data)
     info = []
-    x = 0
-    y = 1
-    while x < y:
+    i = len(tb_results['moves'])
+    j = 0
+    while j < i:
         tbmove = []
-        # uci move
-        t_start = data.find('uci', x) + 6
-        t_end = data.find('"', t_start)
-        tbmove.append(data[t_start:t_end])
-        x = t_end
-        
+        # uci move, not used so many I'll refactor this out eventually
+        tbmove.append(tb_results['moves'][j]['uci'])
+
         # san move
-        t_start = data.find('san', x) + 6
-        t_end = data.find('"', t_start)
-        tbmove.append(data[t_start:t_end])
-        x = t_end
-        
+        tbmove.append(tb_results['moves'][j]['san'])
+
         # dtm
-        t_start = data.find('dtm', x) + 5
-        t_end = data.find('}', t_start)
-        if data[t_start:t_end].find('-') >= 0:
-            m = int(data[t_start:t_end]) - 1
-            if fen.find('w', 1) >= 0:
+        m = tb_results['moves'][j]['dtm']
+        if m < 0:
+            m = m - 1
+            if fen.find('w', 0) >= 0:
                 m = m * (-1)
             m = math.floor(m/2)
-            tbmove.append(str(m))
-        elif data[t_start:t_end] != '0':
-            m = int(data[t_start:t_end]) + 1
-            if fen.find('w', 1) >= 0:
+        elif m != 0:
+            m = int(m) + 1
+            if fen.find('w', 0) >= 0:
                 m = m * (-1)
             m = math.ceil(m/2)
-            tbmove.append(str(m))
         else:
-            tbmove.append(data[t_start:t_end])
-        x = t_end
-        y = data.find('uci', x) + 6
+            pass
+        tbmove.append(str(m))
+
         info.append(tbmove)
+        j = j + 1
     
     return info
 
