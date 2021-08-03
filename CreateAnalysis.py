@@ -24,7 +24,7 @@ def bookmoves(fen):
 
 # function to count number of pieces on the board
 def piececount(fen):
-    end = fen.find(" ", 1)
+    end = fen.find(' ', 1)
     brd = fen[0:end]
     ct = 0
     for x in brd:
@@ -35,9 +35,9 @@ def piececount(fen):
 # function to return tablebase results
 def tbsearch(fen):
     url = 'http://tablebase.lichess.ovh/standard?fen='
-    fen2 = fen.replace(" ", "_")
+    fen2 = fen.replace(' ', '_')
     html = str(request.urlopen(url + fen2).read())
-    start = html.find("[", 1) + 1
+    start = html.find('[', 1) + 1
     end = len(html) - 1
     data = html[start:end]
     info = []
@@ -46,87 +46,87 @@ def tbsearch(fen):
     while x < y:
         tbmove = []
         # uci move
-        t_start = data.find("uci", x) + 6
+        t_start = data.find('uci', x) + 6
         t_end = data.find('"', t_start)
         tbmove.append(data[t_start:t_end])
         x = t_end
         
         # san move
-        t_start = data.find("san", x) + 6
+        t_start = data.find('san', x) + 6
         t_end = data.find('"', t_start)
         tbmove.append(data[t_start:t_end])
         x = t_end
         
         # dtm
-        t_start = data.find("dtm", x) + 5
+        t_start = data.find('dtm', x) + 5
         t_end = data.find('}', t_start)
-        if data[t_start:t_end].find("-") >= 0:
+        if data[t_start:t_end].find('-') >= 0:
             m = int(data[t_start:t_end]) - 1
-            if fen.find("w", 1) >= 0:
+            if fen.find('w', 1) >= 0:
                 m = m * (-1)
             m = math.floor(m/2)
             tbmove.append(str(m))
-        elif data[t_start:t_end] != "0":
+        elif data[t_start:t_end] != '0':
             m = int(data[t_start:t_end]) + 1
-            if fen.find("w", 1) >= 0:
+            if fen.find('w', 1) >= 0:
                 m = m * (-1)
             m = math.ceil(m/2)
             tbmove.append(str(m))
         else:
             tbmove.append(data[t_start:t_end])
         x = t_end
-        y = data.find("uci", x) + 6
+        y = data.find('uci', x) + 6
         info.append(tbmove)
     
     return info
 
 def tbeval(k):
-    if k == "0":
-        sc = "0.00"
+    if k == '0':
+        sc = '0.00'
     else:
-        if k.find("-") >= 0:
-            sc = "#" + k
+        if k.find('-') >= 0:
+            sc = '#' + k
         else:
-            sc = "#+" + k
+            sc = '#+' + k
     return sc
 
 def main():
     # other parameters
     d = 11 # depth
     prog = 1 # flag to list move-by-move progress
-    corrflag = "0" # flag if the PGN being processed is correspondence games
+    corrflag = '0' # flag if the PGN being processed is correspondence games
     db = 1 # use database to get next GameID val
-    db_name = 'ControlGames' # database name
-    control_flag = 1 # determines file paths
-    pgn_name = "FrankfurtChB" # name of file
+    db_name = 'OnlineGames' # database name
+    control_flag = 0 # determines file paths
+    pgn_name = 'NefariousNebula_202107_Cleaned' # name of file
 
     # input/output stuff
     if control_flag == 1:
-        pgn_path = r"C:\Users\eehunt\Documents\Chess\Engine Detection\Control Game Data\PGN"
-        output_path = r"C:\Users\eehunt\Documents\Chess\Engine Detection\Control Game Data\Analysis Output"
+        pgn_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Control Game Data\PGN'
+        output_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Control Game Data\Analysis Output'
     else:
-        pgn_path = r"C:\Users\eehunt\Documents\Chess\Engine Detection\Player Analysis\PGN"
-        output_path = r"C:\Users\eehunt\Documents\Chess\Engine Detection\Player Analysis\Analysis Output"
-    full_pgn = os.path.join(pgn_path, pgn_name) + ".pgn"
+        pgn_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Player Analysis\PGN'
+        output_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Player Analysis\Analysis Output'
+    full_pgn = os.path.join(pgn_path, pgn_name) + '.pgn'
     pgn = open(full_pgn)
 
     # analysis output declarations
-    dte = dt.datetime.now().strftime("%Y%m%d%H%M%S")
-    output_file = pgn_name + "_Processed_" + dte + ".txt"
+    dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
+    output_file = pgn_name + '_Processed_' + dte + '.txt'
     full_output = os.path.join(output_path, output_file)
-    row_delim = "\n"
+    row_delim = '\n'
 
     # initiate engine
-    engine_path = r"C:\Users\eehunt\Documents\Chess\ENGINES"
-    engine_name = "stockfish_11_x64"
+    engine_path = r'C:\Users\eehunt\Documents\Chess\ENGINES'
+    engine_name = 'stockfish_11_x64'
     eng = engine_name + 25*' '
     eng = eng[0:25]
     engine = chess.engine.SimpleEngine.popen_uci(os.path.join(engine_path, engine_name))
 
     # initiate SQL connection
     if db == 1:
-        conn = sql.connect("Driver={ODBC Driver 17 for SQL Server};Server=HUNT-PC1;"
-                            "Database=ChessAnalysis;Trusted_Connection=yes;")
+        conn = sql.connect('Driver={ODBC Driver 17 for SQL Server};Server=HUNT-PC1;'
+                            'Database=ChessAnalysis;Trusted_Connection=yes;')
         csr = conn.cursor()
         
         qry_text = "SELECT IDENT_CURRENT('" + db_name + "') + 1 AS GameID"
@@ -135,9 +135,9 @@ def main():
         conn.close()
     else:
         gameid = 1 # hard code first gameid, if necessary
-    print("Current GameID:" + str(gameid))
+    print('Current GameID:' + str(gameid))
 
-    print("BEGIN PROCESSING: " + dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print('BEGIN PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     ctr = 0
     for gm in pgn:
         ctr = ctr + 1
@@ -151,9 +151,9 @@ def main():
         except:
             tournament = 50*' '
         try:
-            whitelast = game_text.headers["White"]
-            if whitelast.find(",", 1) >= 0:
-                whitelast, whitefirst = whitelast.split(",", 2)
+            whitelast = game_text.headers['White']
+            if whitelast.find(',', 1) >= 0:
+                whitelast, whitefirst = whitelast.split(',', 2)
                 whitelast = whitelast.strip() + 50*' '
                 whitefirst = whitefirst.strip() + 25*' '
                 whitelast = whitelast[0:50]
@@ -163,12 +163,12 @@ def main():
                 whitelast = whitelast[0:50]
                 whitefirst = 25*' '
         except:
-            whitelast = ""
-            whitefirst = ""
+            whitelast = ''
+            whitefirst = ''
         try:
-            blacklast = game_text.headers["Black"]
-            if blacklast.find(",", 1) >= 0:
-                blacklast, blackfirst = blacklast.split(",", 2)
+            blacklast = game_text.headers['Black']
+            if blacklast.find(',', 1) >= 0:
+                blacklast, blackfirst = blacklast.split(',', 2)
                 blacklast = blacklast.strip() + 50*' '
                 blackfirst = blackfirst.strip() + 25*' '
                 blacklast = blacklast[0:50]
@@ -178,78 +178,109 @@ def main():
                 blacklast = blacklast[0:50]
                 blackfirst = 25*' '
         except:
-            blacklast = ""
-            blackfirst = ""
+            blacklast = ''
+            blackfirst = ''
         try:
-            whiteelo = game_text.headers["WhiteElo"] + 4*' '
+            whiteelo = game_text.headers['WhiteElo'] + 4*' '
             whiteelo = whiteelo[0:4]
         except:
             whiteelo = 4*' '
         try:
-            blackelo = game_text.headers["BlackElo"] + 4*' '
+            blackelo = game_text.headers['BlackElo'] + 4*' '
             blackelo = blackelo[0:4]
         except:
             blackelo = 4*' '
         try:
-            roundnum = game_text.headers["Round"] + 7*' '
-            if roundnum == "-" + 7*' ':
-                roundnum = 7*' '
+            roundnum = game_text.headers['Round'] + 7*' '
+            if roundnum == '-' + 7*' ':
+                roundnum = '?' + 7*' '
             roundnum = roundnum[0:7]
         except:
-            roundnum = 7*' '
+            roundnum = '?' + 7*' '
         try:
-            eco = game_text.headers["ECO"] + 3*' '
+            eco = game_text.headers['ECO'] + 3*' '
             eco = eco[0:3]
         except:
             eco = 3* ' '
         try:
-            gamedate = game_text.headers["Date"] + 10*' '
+            gamedate = game_text.headers['Date'] + 10*' '
             gamedate = gamedate[0:10]
         except:
             gamedate = 10*' '
         try:
-            result = game_text.headers["Result"]
-            if result == "1-0":
-                result = "1.0"
-            elif result == "0-1":
-                result = "0.0"
-            elif result == "1/2-1/2":
-                result = "0.5"
+            result = game_text.headers['Result']
+            if result == '1-0':
+                result = '1.0'
+            elif result == '0-1':
+                result = '0.0'
+            elif result == '1/2-1/2':
+                result = '0.5'
             else:
                 result = 3*' '
             result = result[0:3]
         except:
             result = 3*' '
         try: 
-            moves = str(math.ceil(int(game_text.headers["PlyCount"])/2)) + 3*' '
+            moves = str(math.ceil(int(game_text.headers['PlyCount'])/2)) + 3*' '
             moves = moves[0:3]
         except:
             moves = 3*' '
+        try:
+            site = game_text.headers['Site']
+            if site.find('lichess', 0) >= 0:
+                src = 'Lichess' + 15*' '
+            elif site.find('Chess.com', 0) >= 0:
+                src = 'Chess.com' + 15*' '
+            else:
+                src = 15*' '
+            src = src[0:15]
+        except:
+            src = 15*' '
+        try:
+            site = game_text.headers['Site']
+            if site.find('lichess', 0) >= 0:
+                srcid = site.split('/')[-1] + 20*' '
+            elif site.find('Chess.com', 0) >= 0:
+                try:
+                    lnk = game_text.headers['Link']
+                    srcid = lnk.split('/')[-1] + 20*' '
+                except:
+                    srcid = 20*' '
+            else:
+                srcid = 20*' '
+            srcid = srcid[0:20]
+        except:
+            srcid = 20*' '
+        try:
+            tmctrl = game_text.headers['TimeControl'] + 15*' '
+            tmctrl = tmctrl[0:15]
+        except:
+            tmctrl = 15*' '
         
-        if whitelast == "" or blacklast == "":
-            print("PGN game %d was missing names and not processed!" % (ctr))
+        if whitelast == '' or blacklast == '':
+            print('PGN game %d was missing names and not processed!' % (ctr))
         else:
-            f = open(full_output, "a")
+            f = open(full_output, 'a')
             # RECORD 01: PRIMARY GAME INFORMATION
-            f.write("01" + whitelast + whitefirst + whiteelo + blacklast + 
+            f.write('01' + whitelast + whitefirst + whiteelo + blacklast + 
                     blackfirst + blackelo + eco + gamedate + tournament +
-                    roundnum + result + moves + corrflag + row_delim)
+                    roundnum + result + moves + corrflag + src + srcid + tmctrl + row_delim)
 
-            istheory = "1"
+            istheory = '1'
             for mv in game_text.mainline_moves():
                 s_time = t.time()
                 fen = board.fen()
                 
-                if istheory == "1":
+                if istheory == '1':
                     if board.san(mv) not in bookmoves(fen):
-                        istheory = "0"
+                        istheory = '0'
                 
                 if piececount(fen) > 5: # 7-piece tablebases are available, but freely distributed syzergy files don't have DTM data; only Lomonosov
-                    istablebase = "0"
+                    istablebase = '0'
                     if board.turn:
-                        color = "White"
+                        color = 'White'
                     else:
-                        color = "Black"
+                        color = 'Black'
                     
                     eval_properA = []
                     eval_list = []
@@ -258,11 +289,11 @@ def main():
                         print(str(ctr), str(gameid), color, board.fullmove_number)
                     
                     for lgl in board.legal_moves:
-                        info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[lgl], options={"Threads": 8})
-                        evals = str(info["score"].white())
+                        info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[lgl], options={'Threads': 8})
+                        evals = str(info['score'].white())
                         move_list.append(board.san(lgl))
 
-                        if evals.startswith("#"):
+                        if evals.startswith('#'):
                             eval_p = int(evals[1:len(evals)])
                             eval_properA.append(chess.engine.Mate(eval_p))
                             eval_list.append(evals)
@@ -282,15 +313,15 @@ def main():
                         eval_properB = sorted(eval_properA)
                             
                     if board.san(mv) not in move_sort[0:31]:
-                        info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={"Threads": 8})
+                        info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
                         move = board.san(mv)
-                        move_eval = str(info["score"].white())
+                        move_eval = str(info['score'].white())
                         if not board.turn:
-                            if move_eval.find("-") >= 0:
-                                move_eval = move_eval.replace("-", "+")
+                            if move_eval.find('-') >= 0:
+                                move_eval = move_eval.replace('-', '+')
                             else:
-                                move_eval = move_eval.replace("+", "-")
-                        if not move_eval.startswith("#"):
+                                move_eval = move_eval.replace('+', '-')
+                        if not move_eval.startswith('#'):
                             move_eval = round(int(move_eval)/100., 2)
                     else:
                         move = board.san(mv)
@@ -560,7 +591,7 @@ def main():
                         t32 = 7*' '
                         t32_eval = 6*' '
                     try:
-                        if str(eval_sort[0]).startswith("#") or str(move_eval).startswith("#"):
+                        if str(eval_sort[0]).startswith('#') or str(move_eval).startswith('#'):
                             cp_loss = 6*' '
                         else:
                             cp_loss = str(round(abs(eval_sort[0] - move_eval), 2)) + 6*' '
@@ -580,7 +611,7 @@ def main():
                     fen = fen[0:92]
         
                     # RECORD 02: MOVE ANALYSIS
-                    f.write("02" + gmid + movenum + color + istheory + istablebase +
+                    f.write('02' + gmid + movenum + color + istheory + istablebase +
                         move + t1 + t2 + t3 + t4 + t5 + t6 + t7 + t8 + t9 + t10 +
                         t11 + t12 + t13 + t14 + t15 + t16 + t17 + t18 + t19 + t20 +
                         t21 + t22 + t23 + t24 + t25 + t26 + t27 + t28 + t29 + t30 +
@@ -596,7 +627,7 @@ def main():
                     
                     board.push(mv)
                 else:
-                    istablebase = "1"
+                    istablebase = '1'
                     try:
                         tbresults = tbsearch(fen)
                     except:
@@ -608,9 +639,9 @@ def main():
                             idx = k
                         k = k + 1
                     if board.turn:
-                        color = "White"
+                        color = 'White'
                     else:
-                        color = "Black"
+                        color = 'Black'
                     
                     gmid = str(gameid) + 10*' '
                     gmid = gmid[0:10]
@@ -618,17 +649,17 @@ def main():
                     movenum = movenum[0:3]
                     move = board.san(mv) + 7*' '
                     move = move[0:7]
-                    if tbresults[idx][2] == "0":
-                        move_eval = "0.00" + 6*' '
+                    if tbresults[idx][2] == '0':
+                        move_eval = '0.00' + 6*' '
                         move_eval = move_eval[0:6]
                     else:
-                        if tbresults[idx][2].find("-") >= 0:
-                            move_eval = "#" + tbresults[idx][2] + 6*' '
+                        if tbresults[idx][2].find('-') >= 0:
+                            move_eval = '#' + tbresults[idx][2] + 6*' '
                             move_eval = move_eval[0:6]
                         else:
-                            move_eval = "#+" + tbresults[idx][2] + 6*' '
+                            move_eval = '#+' + tbresults[idx][2] + 6*' '
                             move_eval = move_eval[0:6]
-                    dp = "TB" # may change
+                    dp = 'TB' # may change
                     fen = board.fen() + 92*' '
                     fen = fen[0:92]
                     cp_loss = 6*' '
@@ -898,7 +929,7 @@ def main():
                         
         
                     # RECORD 02: MOVE ANALYSIS
-                    f.write("02" + gmid + movenum + color + istheory + istablebase +
+                    f.write('02' + gmid + movenum + color + istheory + istablebase +
                         move + t1 + t2 + t3 + t4 + t5 + t6 + t7 + t8 + t9 + t10 +
                         t11 + t12 + t13 + t14 + t15 + t16 + t17 + t18 + t19 + t20 +
                         t21 + t22 + t23 + t24 + t25 + t26 + t27 + t28 + t29 + t30 +
@@ -914,7 +945,7 @@ def main():
                     
                     board.push(mv)
                         
-            print("Completed processing game " + str(ctr) + " at " + dt.datetime.now().strftime("%H:%M:%S"))
+            print('Completed processing game ' + str(ctr) + ' at ' + dt.datetime.now().strftime('%H:%M:%S'))
             gameid = gameid + 1
         f.flush()
     engine.quit()
@@ -923,7 +954,7 @@ def main():
         f.close()
     except:
         pass
-    print("END PROCESSING: " + dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print('END PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 if __name__ == '__main__':
     main()
