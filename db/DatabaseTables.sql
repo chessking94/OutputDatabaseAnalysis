@@ -21,6 +21,9 @@ CREATE TABLE [dbo].[ControlGames](
 	[Moves] [int] NULL,
 	[DateAdded] [datetime] NULL,
 	[CorrFlag] [tinyint] NULL,
+	[Source] [varchar](15) NULL,
+	[SourceID] [varchar](20) NULL,
+	[TimeControl] [varchar](15) NULL,
  CONSTRAINT [PK_CG_GameID] PRIMARY KEY CLUSTERED 
 (
 	[GameID] ASC

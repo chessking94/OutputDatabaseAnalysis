@@ -12,4 +12,7 @@ Tournament	50	174	223
 RoundNum	7	224	230
 Result	3	231	233
 Moves	3	234	236
-CorrFlag	1	237	238
+CorrFlag	1	237	237
+Source	15	238	252
+SourceID	20	253	272
+TimeControl	15	273	287
