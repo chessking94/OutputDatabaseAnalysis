@@ -37,7 +37,6 @@ def piececount(fen):
 def tbsearch(fen):
     url = 'http://tablebase.lichess.ovh/standard?fen='
     fen2 = fen.replace(' ', '_')
-    json_data = str(request.urlopen(url + fen2).read())
     json_data = request.urlopen(url + fen2).read()
     tb_results = json.loads(json_data)
     info = []
@@ -45,7 +44,7 @@ def tbsearch(fen):
     j = 0
     while j < i:
         tbmove = []
-        # uci move, not used so many I'll refactor this out eventually
+        # uci move, not used so maybe I'll refactor this out eventually
         tbmove.append(tb_results['moves'][j]['uci'])
 
         # san move
@@ -84,13 +83,13 @@ def tbeval(k):
 
 def main():
     # other parameters
-    d = 11 # depth
+    d = 15 # depth
     prog = 1 # flag to list move-by-move progress
     corrflag = '0' # flag if the PGN being processed is correspondence games
     db = 1 # use database to get next GameID val
-    db_name = 'OnlineGames' # database name
+    db_name = 'EEHGames' # database name
     control_flag = 0 # determines file paths
-    pgn_name = 'NefariousNebula_202107_Cleaned' # name of file
+    pgn_name = 'ThK_20210909' # name of file
 
     # input/output stuff
     if control_flag == 1:
@@ -298,11 +297,11 @@ def main():
                     if board.turn:
                         move_sort = [x for _, x in sorted(zip(eval_properA, move_list), reverse=True)]
                         eval_sort = [y for _, y in sorted(zip(eval_properA, eval_list), reverse=True)]
-                        eval_properB = sorted(eval_properA, reverse=True)
+                        # eval_properB = sorted(eval_properA, reverse=True)
                     else:
                         move_sort = [x for _, x in sorted(zip(eval_properA, move_list), reverse=False)]
                         eval_sort = [y for _, y in sorted(zip(eval_properA, eval_list), reverse=False)]
-                        eval_properB = sorted(eval_properA)
+                        # eval_properB = sorted(eval_properA)
                             
                     if board.san(mv) not in move_sort[0:31]:
                         info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
@@ -326,6 +325,7 @@ def main():
                     movenum = str(board.fullmove_number) + 3*' '
                     movenum = movenum[0:3]
                     # there is probably a more efficient way to do the below, but it works for now
+                    # maybe look into dictionaries?
                     try:
                         t1 = str(move_sort[0]) + 7*' '
                         t1_eval = str(eval_sort[0]) + 6*' '
@@ -662,6 +662,7 @@ def main():
                     e_time = str(round(t.time() - s_time, 4)) + 8*' '
                     e_time = e_time[0:8]
                     
+                    # same as above, maybe look into dictionaries to simplify the below
                     try:
                         t1 = tbresults[0][1] + 7*' '
                         t1_eval = tbeval(tbresults[0][2]) + 6*' '
