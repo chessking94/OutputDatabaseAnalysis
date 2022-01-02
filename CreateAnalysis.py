@@ -125,6 +125,7 @@ def main():
 
     print('BEGIN PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     ctr = 0
+    """ Potentially could try and refactor out this for loop and use only chess.pgn.read_game(pgn), would need to review carefully """
     for gm in pgn:
         ctr = ctr + 1
         game_text = chess.pgn.read_game(pgn)
@@ -289,12 +290,8 @@ def main():
                             evals = round(int(evals)/100., 2)
                             eval_list.append(evals)
 
-                    if board.turn:
-                        move_sort = [x for _, x in sorted(zip(eval_properA, move_list), reverse=True)]
-                        eval_sort = [y for _, y in sorted(zip(eval_properA, eval_list), reverse=True)]
-                    else:
-                        move_sort = [x for _, x in sorted(zip(eval_properA, move_list), reverse=False)]
-                        eval_sort = [y for _, y in sorted(zip(eval_properA, eval_list), reverse=False)]
+                    move_sort = [x for _, x in sorted(zip(eval_properA, move_list), reverse=board.turn)]
+                    eval_sort = [y for _, y in sorted(zip(eval_properA, eval_list), reverse=board.turn)]
                             
                     if board.san(mv) not in move_sort[0:31]:
                         info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
@@ -337,14 +334,11 @@ def main():
                     for ev_val in eval_dict:
                         eval_conc = eval_conc + eval_dict[ev_val]
                     
-                    try:
-                        if str(eval_sort[0]).startswith('#') or str(move_eval).startswith('#'):
-                            cp_loss = 6*' '
-                        else:
-                            cp_loss = str(round(abs(eval_sort[0] - move_eval), 2)) + 6*' '
-                            cp_loss = cp_loss[0:6]
-                    except IndexError:
+                    if str(eval_sort[0]).startswith('#') or str(move_eval).startswith('#'):
                         cp_loss = 6*' '
+                    else:
+                        cp_loss = str(round(abs(eval_sort[0] - move_eval), 2)) + 6*' '
+                        cp_loss = cp_loss[0:6]
                     
                     move = move + 7*' '
                     move = move[0:7]
@@ -367,7 +361,7 @@ def main():
                     istablebase = '1'
                     try:
                         tbresults = tbsearch(fen)
-                    except:
+                    except: # should only fail due to a 429 web request
                         t.sleep(75)
                         tbresults = tbsearch(fen)
                     k = 0
