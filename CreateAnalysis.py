@@ -88,7 +88,7 @@ def main():
     db = 1 # use database to get next GameID val
     db_name = 'EEHGames' # database name
     control_flag = 0 # determines file paths
-    pgn_name = 'ThK_20211223' # name of file
+    pgn_name = 'ThK_20220317' # name of file
 
     # input/output stuff
     if control_flag == 1:
@@ -108,6 +108,7 @@ def main():
 
     # initiate engine
     engine_path = r'C:\Users\eehunt\Documents\Chess\ENGINES'
+    #engine_name = 'stockfish_14.1_x64'
     engine_name = 'stockfish_11_x64'
     eng = engine_name + 25*' '
     eng = eng[0:25]
@@ -218,6 +219,8 @@ def main():
                 src = 'Lichess' + 15*' '
             elif site.find('Chess.com', 0) >= 0:
                 src = 'Chess.com' + 15*' '
+            elif site.find('FICS', 0) >= 0:
+                src = 'FICS' + 15*' '
             else:
                 src = 15*' '
             src = src[0:15]
@@ -233,6 +236,8 @@ def main():
                     srcid = lnk.split('/')[-1] + 20*' '
                 except:
                     srcid = 20*' '
+            elif site.find('FICS', 0) >= 0:
+                srcid = game_text.headers['FICSGamesDBGameNo'] + 20*' '
             else:
                 srcid = 20*' '
             srcid = srcid[0:20]
