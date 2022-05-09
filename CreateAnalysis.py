@@ -8,7 +8,7 @@ import os
 import pandas as pd
 import pyodbc as sql
 import requests
-import time as t
+import time
 
 # function to generate list of moves in Lichess opening explorer
 def bookmoves(fen, date):
@@ -39,7 +39,7 @@ def bookmoves(fen, date):
                 ct = ct + 1
                 if cde == 429:
                     print('API returned 429, waiting 65 seconds before trying again')
-                    t.sleep(65)
+                    time.sleep(65)
                 else:
                     print('API returned ' + str(cde) +', skipped FEN ' + fen)
             
@@ -111,7 +111,7 @@ def tbsearch(fen):
                 ct = ct + 1
                 if cde == 429:
                     print('API returned 429, waiting 65 seconds before trying again')
-                    t.sleep(65)
+                    time.sleep(65)
                 else:
                     print('API returned ' + str(cde) +', skipped FEN ' + fen)
             
@@ -321,7 +321,7 @@ def main():
 
             istheory = '1'
             for mv in game_text.mainline_moves():
-                s_time = t.time()
+                s_time = time.time()
                 fen = board.fen()
                 
                 if istheory == '1':
@@ -376,7 +376,7 @@ def main():
                         i = move_sort[0:31].index(move)
                         move_eval = eval_sort[i]
                     
-                    e_time = str(round(t.time() - s_time, 4)) + 8*' '
+                    e_time = str(round(time.time() - s_time, 4)) + 8*' '
                     e_time = e_time[0:8]
                     
                     movenum = str(board.fullmove_number) + 3*' '
@@ -461,7 +461,7 @@ def main():
                     if prog == 1:
                         print(str(ctr), str(gameid), color, board.fullmove_number)
 
-                    e_time = str(round(t.time() - s_time, 4)) + 8*' '
+                    e_time = str(round(time.time() - s_time, 4)) + 8*' '
                     e_time = e_time[0:8]
                     
                     move_dict = {'T' + str(ii + 1):  7*' ' for ii in range(32)}
