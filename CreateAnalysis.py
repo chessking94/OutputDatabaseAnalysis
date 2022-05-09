@@ -1,27 +1,52 @@
 import chess
 import chess.pgn
 import chess.engine
-import os
+import datetime as dt
 import json
 import math
-import time as t
-import pyodbc as sql
-import datetime as dt
-from urllib import request
-import chess.polyglot
+import os
 import pandas as pd
+import pyodbc as sql
+import requests
+import time as t
 
-# function to generate list of moves in opening book
-def bookmoves(fen):
-    fpath = r'C:\Users\eehunt\Documents\Chess\Polyglot'
-    fname = 'custom_book.bin'
-    full_path = os.path.join(fpath, fname)
-    board = chess.Board(fen)
-    theory = []
-    with chess.polyglot.open_reader(full_path) as reader:
-        for entry in reader.find_all(board):
-            mv = board.san(entry.move)
-            theory.append(mv)
+# function to generate list of moves in Lichess opening explorer
+def bookmoves(fen, date):
+    # get auth token, don't think there's any benefit to doing this but it's best practice
+    fpath = r'C:\Users\eehunt\Repository'
+    fname = 'keys.json'
+    with open(os.path.join(fpath, fname), 'r') as t:
+        key_data = json.load(t)
+    token_value = key_data.get('LichessAPIToken')
+
+    base_url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=rapid,classical,correspondence&ratings=2000,2200,2500&fen='
+    url = base_url + fen.replace(' ', '_')
+    if date is not None: # this check is in place to essentially avoid my own Lichess games from being referenced in the explorer API
+        url = url + '&until=' + date
+
+    hdr = {'Authorization': 'Bearer ' + token_value}
+    cde = 429
+    while cde != 200:
+        with requests.get(url, headers=hdr) as resp:
+            cde = resp.status_code
+            theory = []
+            ct = 0
+            if cde == 200:
+                book_results = json.loads(resp.content)
+                for mv in book_results['moves']:
+                    theory.append(mv['san'])
+            else:
+                ct = ct + 1
+                if cde == 429:
+                    print('API returned 429, waiting 65 seconds before trying again')
+                    t.sleep(65)
+                else:
+                    print('API returned ' + str(cde) +', skipped FEN ' + fen)
+            
+            if ct == 5: # exit ability to avoid infinite loop
+                print('API rejected 5 consecutive times, skipping!')
+                cde = 200
+    
     return theory
 
 # function to count number of pieces on the board
@@ -36,38 +61,64 @@ def piececount(fen):
 
 # function to return tablebase results
 def tbsearch(fen):
-    url = 'http://tablebase.lichess.ovh/standard?fen='
-    fen2 = fen.replace(' ', '_')
-    json_data = request.urlopen(url + fen2).read()
-    tb_results = json.loads(json_data)
-    info = []
-    i = len(tb_results['moves'])
-    j = 0
-    while j < i:
-        tbmove = []
+    # get auth token
+    fpath = r'C:\Users\eehunt\Repository'
+    fname = 'keys.json'
+    with open(os.path.join(fpath, fname), 'r') as t:
+        key_data = json.load(t)
+    token_value = key_data.get('LichessAPIToken')
 
-        # san move
-        tbmove.append(tb_results['moves'][j]['san'])
+    base_url = 'http://tablebase.lichess.ovh/standard?fen='
+    url = base_url + fen.replace(' ', '_')
 
-        # dtm
-        m = tb_results['moves'][j]['dtm']
-        if m < 0:
-            m = m - 1
-            if fen.find('w', 0) >= 0:
-                m = m * (-1)
-            m = math.floor(m/2)
-        elif m != 0:
-            m = int(m) + 1
-            if fen.find('w', 0) >= 0:
-                m = m * (-1)
-            m = math.ceil(m/2)
-        else:
-            pass
-        tbmove.append(str(m))
+    hdr = {'Authorization': 'Bearer ' + token_value}
+    cde = 429
+    while cde != 200:
+        with requests.get(url, headers=hdr) as resp:
+            cde = resp.status_code
+            info = []
+            ct = 0
+            if cde == 200:
+                tb_results = json.loads(resp.content)
+                info = []
+                i = len(tb_results['moves'])
+                j = 0
+                while j < i:
+                    tbmove = []
 
-        info.append(tbmove)
-        j = j + 1
-    
+                    # san move
+                    tbmove.append(tb_results['moves'][j]['san'])
+
+                    # dtm
+                    m = tb_results['moves'][j]['dtm']
+                    if m < 0:
+                        m = m - 1
+                        if fen.find('w', 0) >= 0:
+                            m = m * (-1)
+                        m = math.floor(m/2)
+                    elif m != 0:
+                        m = int(m) + 1
+                        if fen.find('w', 0) >= 0:
+                            m = m * (-1)
+                        m = math.ceil(m/2)
+                    else:
+                        pass
+                    tbmove.append(str(m))
+
+                    info.append(tbmove)
+                    j = j + 1
+            else:
+                ct = ct + 1
+                if cde == 429:
+                    print('API returned 429, waiting 65 seconds before trying again')
+                    t.sleep(65)
+                else:
+                    print('API returned ' + str(cde) +', skipped FEN ' + fen)
+            
+            if ct == 5: # exit ability to avoid infinite loop
+                print('API rejected 5 consecutive times, skipping!')
+                cde = 200             
+
     return info
 
 def tbeval(k):
@@ -88,7 +139,7 @@ def main():
     db = 1 # use database to get next GameID val
     db_name = 'EEHGames' # database name
     control_flag = 0 # determines file paths
-    pgn_name = 'ThK_20220317' # name of file
+    pgn_name = 'ThK_20220505' # name of file
 
     # input/output stuff
     if control_flag == 1:
@@ -193,8 +244,18 @@ def main():
         try:
             gamedate = game_text.headers['Date'] + 10*' '
             gamedate = gamedate[0:10]
+            game_yr = int(gamedate[0:4])
+            game_mo = int(gamedate[5:7])
+            if game_mo == 1:
+                game_mo = '12'
+                game_yr = str(game_yr - 1)
+            else:
+                game_mo = game_mo - 1
+                game_mo = '0' + str(game_mo) if game_mo < 10 else str(game_mo)
+            date_val = game_yr + '-' + game_mo
         except:
             gamedate = 10*' '
+            date_val = None
         try:
             result = game_text.headers['Result']
             if result == '1-0':
@@ -264,9 +325,10 @@ def main():
                 fen = board.fen()
                 
                 if istheory == '1':
-                    if board.san(mv) not in bookmoves(fen):
+                    if board.san(mv) not in bookmoves(fen, date_val):
                         istheory = '0'
                 
+                # TODO: Consider refactoring to use 7 piece tablebases; would need to come up with a new way to interpret DTZ values instead of DTM; could still use DTM when 5 or fewer pieces present
                 if piececount(fen) > 5: # 6/7-piece tablebases are available, but freely distributed syzergy files don't have DTM data; only Lomonosov
                     istablebase = '0'
                     if board.turn:
@@ -364,11 +426,7 @@ def main():
                     board.push(mv)
                 else:
                     istablebase = '1'
-                    try:
-                        tbresults = tbsearch(fen)
-                    except: # should only fail due to a 429 web request
-                        t.sleep(75)
-                        tbresults = tbsearch(fen)
+                    tbresults = tbsearch(fen)
                     k = 0
                     for sc in tbresults:
                         if tbresults[k][0] == board.san(mv):
