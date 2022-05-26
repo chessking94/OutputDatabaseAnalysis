@@ -1,23 +1,29 @@
-import chess
-import chess.pgn
-import chess.engine
 import datetime as dt
 import json
+import logging
 import math
 import os
+import time
+
+import chess
+import chess.engine
+import chess.pgn
 import pandas as pd
 import pyodbc as sql
 import requests
-import time
 
-# function to generate list of moves in Lichess opening explorer
-def bookmoves(fen, date):
-    # get auth token, don't think there's any benefit to doing this but it's best practice
+
+def getlichesstoken():
     fpath = r'C:\Users\eehunt\Repository'
-    fname = 'keys.json'
+    fname = 'confidential.json'
     with open(os.path.join(fpath, fname), 'r') as t:
         key_data = json.load(t)
     token_value = key_data.get('LichessAPIToken')
+    return token_value
+
+# function to generate list of moves in Lichess opening explorer
+def bookmoves(fen, date):
+    token_value = getlichesstoken()
 
     base_url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=rapid,classical,correspondence&ratings=2000,2200,2500&fen='
     url = base_url + fen.replace(' ', '_')
@@ -38,13 +44,13 @@ def bookmoves(fen, date):
             else:
                 ct = ct + 1
                 if cde == 429:
-                    print('API returned 429, waiting 65 seconds before trying again')
+                    logging.info('API returned 429, waiting 65 seconds before trying again')
                     time.sleep(65)
                 else:
-                    print('API returned ' + str(cde) +', skipped FEN ' + fen)
+                    logging.info('API returned ' + str(cde) +', skipped FEN ' + fen)
             
             if ct == 5: # exit ability to avoid infinite loop
-                print('API rejected 5 consecutive times, skipping!')
+                logging.info('API rejected 5 consecutive times, skipping!')
                 cde = 200
     
     return theory
@@ -61,12 +67,7 @@ def piececount(fen):
 
 # function to return tablebase results
 def tbsearch(fen):
-    # get auth token
-    fpath = r'C:\Users\eehunt\Repository'
-    fname = 'keys.json'
-    with open(os.path.join(fpath, fname), 'r') as t:
-        key_data = json.load(t)
-    token_value = key_data.get('LichessAPIToken')
+    token_value = getlichesstoken()
 
     base_url = 'http://tablebase.lichess.ovh/standard?fen='
     url = base_url + fen.replace(' ', '_')
@@ -91,55 +92,80 @@ def tbsearch(fen):
 
                     # dtm
                     m = tb_results['moves'][j]['dtm']
-                    if m < 0:
-                        m = m - 1
-                        if fen.find('w', 0) >= 0:
-                            m = m * (-1)
-                        m = math.floor(m/2)
-                    elif m != 0:
-                        m = int(m) + 1
-                        if fen.find('w', 0) >= 0:
-                            m = m * (-1)
-                        m = math.ceil(m/2)
-                    else:
-                        pass
-                    tbmove.append(str(m))
+                    if m is not None:
+                        if m < 0:
+                            m = m - 1
+                            if fen.find('w', 0) >= 0:
+                                m = m * (-1)
+                            m = math.floor(m/2)
+                        elif m > 0:
+                            m = int(m) + 1
+                            if fen.find('w', 0) >= 0:
+                                m = m * (-1)
+                            m = math.ceil(m/2)
+                        else:
+                            pass
+                        m = str(m)
+                    tbmove.append(m)
+
+                    # dtz
+                    z = tb_results['moves'][j]['dtz']
+                    if z is not None:
+                        if z < 0: # winning
+                            z = z - 1
+                            if fen.find('w', 0) >= 0:
+                                z = z * (-1)
+                            z = math.floor(z/2)
+                        elif z > 0:
+                            z = z + 1
+                            if fen.find('w', 0) >= 0:
+                                z = z * (-1)
+                            z = math.ceil(z/2)
+                        else:
+                            pass
+                        z = str(z)
+                    tbmove.append(z)
 
                     info.append(tbmove)
                     j = j + 1
             else:
                 ct = ct + 1
                 if cde == 429:
-                    print('API returned 429, waiting 65 seconds before trying again')
+                    logging.info('API returned 429, waiting 65 seconds before trying again')
                     time.sleep(65)
                 else:
-                    print('API returned ' + str(cde) +', skipped FEN ' + fen)
+                    logging.info('API returned ' + str(cde) +', skipped FEN ' + fen)
             
             if ct == 5: # exit ability to avoid infinite loop
-                print('API rejected 5 consecutive times, skipping!')
+                logging.info('API rejected 5 consecutive times, skipping!')
                 cde = 200             
 
     return info
 
-def tbeval(k):
-    if k == '0':
-        sc = '0.00'
-    else:
-        if k.find('-') >= 0:
-            sc = '#' + k
+def tbeval(tbdata):
+    # returns #-n, #+n, #+nZ, and #-nZ
+    if tbdata[1] is not None: # DTM populated, takes priority
+        if tbdata[1] == '0':
+            sc = '0.00'
         else:
-            sc = '#+' + k
+            sc = '#' + tbdata[1] if tbdata[1].find('-') >= 0 else '#+' + tbdata[1]
+    else:
+        if tbdata[2] == '0':
+            sc = '0.00'
+        else:
+            sc = '#' + tbdata[2] + 'Z' if tbdata[2].find('-') >= 0 else '#+' + tbdata[2] + 'Z'
     return sc
 
 def main():
+    logging.basicConfig(format='%(message)s', level=logging.INFO)
+
     # other parameters
-    d = 15 # depth
-    prog = 1 # flag to list move-by-move progress
+    d = 11 # depth
     corrflag = '0' # flag if the PGN being processed is correspondence games
-    db = 1 # use database to get next GameID val
+    db = 0 # use database to get next GameID val
     db_name = 'EEHGames' # database name
     control_flag = 0 # determines file paths
-    pgn_name = 'ThK_20220505' # name of file
+    pgn_name = 'tb_test' # name of file
 
     # input/output stuff
     if control_flag == 1:
@@ -175,13 +201,14 @@ def main():
     else:
         gameid = 1 # hard code first gameid, if necessary
 
-    print('BEGIN PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info('BEGIN PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     ctr = 0
-    """ Potentially could try and refactor out this for loop and use only chess.pgn.read_game(pgn), would need to review carefully """
+    # TODO: Potentially could try and refactor out this for loop and use only chess.pgn.read_game(pgn), would need to review carefully 
     for gm in pgn:
         ctr = ctr + 1
         game_text = chess.pgn.read_game(pgn)
         board = chess.Board(chess.STARTING_FEN)
+        # TODO: Investigate if it's possible to treat PGN headers like dictionary objects and use .get() instead; eliminate the try-excepts
         try:
             tmnt_s = gm.find('"') + 1
             tmnt_e = gm.find('"', tmnt_s)
@@ -252,6 +279,7 @@ def main():
             else:
                 game_mo = game_mo - 1
                 game_mo = '0' + str(game_mo) if game_mo < 10 else str(game_mo)
+                game_yr = str(game_yr)
             date_val = game_yr + '-' + game_mo
         except:
             gamedate = 10*' '
@@ -311,13 +339,13 @@ def main():
             tmctrl = 15*' '
         
         if whitelast == '' or blacklast == '':
-            print('PGN game %d was missing names and not processed!' % (ctr))
+            logging.info('PGN game %d was missing names and not processed!' % (ctr))
         else:
-            f = open(full_output, 'a')
             # RECORD 01: PRIMARY GAME INFORMATION
-            f.write('01' + whitelast + whitefirst + whiteelo + blacklast + 
-                    blackfirst + blackelo + eco + gamedate + tournament +
-                    roundnum + result + moves + corrflag + src + srcid + tmctrl + row_delim)
+            with open(full_output, 'a') as f:
+                f.write('01' + whitelast + whitefirst + whiteelo + blacklast + 
+                        blackfirst + blackelo + eco + gamedate + tournament +
+                        roundnum + result + moves + corrflag + src + srcid + tmctrl + row_delim)
 
             istheory = '1'
             for mv in game_text.mainline_moves():
@@ -328,8 +356,7 @@ def main():
                     if board.san(mv) not in bookmoves(fen, date_val):
                         istheory = '0'
                 
-                # TODO: Consider refactoring to use 7 piece tablebases; would need to come up with a new way to interpret DTZ values instead of DTM; could still use DTM when 5 or fewer pieces present
-                if piececount(fen) > 5: # 6/7-piece tablebases are available, but freely distributed syzergy files don't have DTM data; only Lomonosov
+                if piececount(fen) > 7:
                     istablebase = '0'
                     if board.turn:
                         color = 'White'
@@ -339,8 +366,7 @@ def main():
                     eval_properA = []
                     eval_list = []
                     move_list = []
-                    if prog == 1:
-                        print(str(ctr), str(gameid), color, board.fullmove_number)
+                    logging.info(str(ctr) + ' ' + str(gameid) + ' ' + color + ' ' + str(board.fullmove_number))
                     
                     for lgl in board.legal_moves:
                         info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[lgl], options={'Threads': 8})
@@ -419,9 +445,10 @@ def main():
                     fen = fen[0:92]
         
                     # RECORD 02: MOVE ANALYSIS
-                    f.write('02' + gmid + movenum + color + istheory + istablebase +
-                        move + mv_conc + move_eval + eval_conc + cp_loss +
-                        eng + dp + e_time + fen + row_delim)
+                    with open(full_output, 'a') as f:
+                        f.write('02' + gmid + movenum + color + istheory + istablebase +
+                            move + mv_conc + move_eval + eval_conc + cp_loss +
+                            eng + dp + e_time + fen + row_delim)
                     
                     board.push(mv)
                 else:
@@ -443,23 +470,14 @@ def main():
                     movenum = movenum[0:3]
                     move = board.san(mv) + 7*' '
                     move = move[0:7]
-                    if tbresults[idx][1] == '0':
-                        move_eval = '0.00' + 6*' '
-                        move_eval = move_eval[0:6]
-                    else:
-                        if tbresults[idx][1].find('-') >= 0:
-                            move_eval = '#' + tbresults[idx][1] + 6*' '
-                            move_eval = move_eval[0:6]
-                        else:
-                            move_eval = '#+' + tbresults[idx][1] + 6*' '
-                            move_eval = move_eval[0:6]
+                    move_eval = tbeval(tbresults[idx]) + 6*' '
+                    move_eval = move_eval[0:6]
                     dp = 'TB'
                     fen = board.fen() + 92*' '
                     fen = fen[0:92]
                     cp_loss = 6*' '
                     
-                    if prog == 1:
-                        print(str(ctr), str(gameid), color, board.fullmove_number)
+                    logging.info(str(ctr) + ' ' + str(gameid) + ' ' + color + ' ' + str(board.fullmove_number))
 
                     e_time = str(round(time.time() - s_time, 4)) + 8*' '
                     e_time = e_time[0:8]
@@ -470,7 +488,7 @@ def main():
                     mv_iter = 32 if len(tbresults) >= 32 else len(tbresults)
                     for i in range(mv_iter):
                         tmp_move = str(tbresults[i][0]) + 7*' '
-                        tmp_eval = tbeval(str(tbresults[i][1])) + 6*' '
+                        tmp_eval = tbeval(tbresults[i]) + 6*' '
                         move_dict.update({'T' + str(i + 1): tmp_move[0:7]})
                         eval_dict.update({'T' + str(i + 1) + '_Eval': tmp_eval[0:6]})
                     
@@ -483,22 +501,18 @@ def main():
                         eval_conc = eval_conc + eval_dict[ev_val]                        
         
                     # RECORD 02: MOVE ANALYSIS
-                    f.write('02' + gmid + movenum + color + istheory + istablebase +
-                        move + mv_conc + move_eval + eval_conc + cp_loss +
-                        eng + dp + e_time + fen + row_delim)
+                    with open(full_output, 'a') as f:
+                        f.write('02' + gmid + movenum + color + istheory + istablebase +
+                            move + mv_conc + move_eval + eval_conc + cp_loss +
+                            eng + dp + e_time + fen + row_delim)
                     
                     board.push(mv)
                         
-            print('Completed processing game ' + str(ctr) + ' at ' + dt.datetime.now().strftime('%H:%M:%S'))
+            logging.info('Completed processing game ' + str(ctr) + ' at ' + dt.datetime.now().strftime('%H:%M:%S'))
             gameid = gameid + 1
-        f.flush()
     engine.quit()
     pgn.close()
-    try:
-        f.close()
-    except:
-        pass
-    print('END PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info('END PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 
 if __name__ == '__main__':
