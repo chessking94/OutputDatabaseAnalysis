@@ -12,6 +12,14 @@ import pandas as pd
 import pyodbc as sql
 import requests
 
+def get_connstr():
+    # get SQL Server connection string from private file
+    fpath = r'C:\Users\eehunt\Repository'
+    fname = 'confidential.json'
+    with open(os.path.join(fpath, fname), 'r') as t:
+        key_data = json.load(t)
+    conn_str = key_data.get('SqlServerConnectionStringTrusted')
+    return conn_str
 
 def getlichesstoken():
     fpath = r'C:\Users\eehunt\Repository'
@@ -21,7 +29,6 @@ def getlichesstoken():
     token_value = key_data.get('LichessAPIToken')
     return token_value
 
-# function to generate list of moves in Lichess opening explorer
 def bookmoves(fen, date):
     token_value = getlichesstoken()
 
@@ -55,7 +62,6 @@ def bookmoves(fen, date):
     
     return theory
 
-# function to count number of pieces on the board
 def piececount(fen):
     end = fen.find(' ', 1)
     brd = fen[0:end]
@@ -65,7 +71,6 @@ def piececount(fen):
             ct = ct + 1
     return ct
 
-# function to return tablebase results
 def tbsearch(fen):
     token_value = getlichesstoken()
 
@@ -156,16 +161,155 @@ def tbeval(tbdata):
             sc = '#' + tbdata[2] + 'Z' if tbdata[2].find('-') >= 0 else '#+' + tbdata[2] + 'Z'
     return sc
 
+# TODO Will need to be rewritten as part of main refactor
+def format_tournament(gm):
+    tmnt_len = 50
+    tmnt_s = gm.find('"') + 1
+    tmnt_e = gm.find('"', tmnt_s)
+    tmnt = (gm[tmnt_s:tmnt_e] + tmnt_len*' ')[0:tmnt_len]
+    
+    return tmnt
+
+def format_name(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    ret_arr = []
+    lname, fname = '', ''
+    lname_len, fname_len = 50, 25
+
+    if tag_text is not None:
+        if tag_text.find(',', 1) >= 0:
+            lname, fname = tag_text.split(',', 2)
+            lname = (lname.strip() + lname_len*' ')[0:lname_len]
+            fname = (fname.strip() + fname_len*' ')[0:fname_len]
+        else:
+            lname = (tag_text.strip() + lname_len*' ')[0:lname_len]
+            fname = fname_len*' '
+    
+    ret_arr.append(lname)
+    ret_arr.append(fname)
+    return ret_arr
+
+def format_elo(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    elo_len = 4
+    elo = elo_len*' '
+
+    if tag_text is not None:
+        elo = (tag_text + elo_len*' ')[0:elo_len]
+    
+    return elo
+
+def format_date(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    dte_arr = []
+    dte_len = 10
+    dte = dte_len*' '
+    dte_val = None
+
+    if tag_text is not None:
+        dte = (tag_text + dte_len*' ')[0:dte_len]
+        yr, mo = int(dte[0:4]), int(dte[5:7])
+        if mo == 1:
+            yr, mo = str(yr - 1), '12'
+        else:
+            yr, mo = str(yr), mo - 1
+            mo = '0' + str(mo) if mo < 10 else str(mo)
+        dte_val = yr + '-' + mo
+    
+    dte_arr.append(dte)
+    dte_arr.append(dte_val)
+    return dte_arr
+
+def format_round(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    rd_len = 7
+    rd = '?' + rd_len*' '
+
+    if tag_text is not None:
+        rd = (tag_text + rd_len*' ')[0:rd_len]
+        rd = rd.replace('-', '?')
+    
+    return rd
+
+def format_eco(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    eco_len = 3
+    eco = eco_len*' '
+
+    if tag_text is not None:
+        eco = (tag_text + eco_len*' ')[0:eco_len]
+    
+    return eco
+
+def format_result(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    res_len = 3
+    res = ''
+
+    if tag_text is not None:
+        if tag_text == '1-0':
+            res = '1.0'
+        elif tag_text == '0-1':
+            res = '0.0'
+        elif tag_text == '1/2-1/2':
+            res = '0.5'
+    
+    res = (res + res_len*' ')[0:res_len]
+    return res
+
+def format_moves(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    mv_len = 3
+    mv = mv_len*' '
+
+    if tag_text is not None:
+        mv = (str(math.ceil(int(tag_text)/2)) + mv_len*' ')[0:mv_len]
+    
+    return mv
+
+def format_source_id(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    site_arr = []
+    site_len, site_id_len = 15, 20
+    site, site_id = site_len*' ', site_id_len*' '
+
+    if tag_text is not None:
+        if tag_text.find('lichess', 0) >= 0:
+            site = ('Lichess' + site_len*' ')[0:site_len]
+            site_id = (tag_text.split('/')[-1] + site_id_len*' ')[0:site_id_len]
+        elif tag_text.find('Chess.com', 0) >= 0:
+            site = ('Chess.com' + site_len*' ')[0:site_len]
+            lnk = game_text.headers.get('Link')
+            if lnk is not None:
+                site_id = (lnk.split('/')[-1] + site_id_len*' ')[0:site_id_len]
+        elif tag_text.find('FICS', 0) >= 0:
+            site = ('FICS' + site_len*' ')[0:site_len]
+            site_id = (game_text.headers.get('FICSGamesDBGameNo') + site_id_len*' ')[0:site_id_len]
+    
+    site_arr.append(site)
+    site_arr.append(site_id)
+    return site_arr
+
+def format_timecontrol(game_text, tag):
+    tag_text = game_text.headers.get(tag)
+    tc_len = 15
+    tc = tc_len*' '
+
+    if tag_text is not None:
+        tc = (tag_text + tc_len*' ')[0:tc_len]
+    
+    return tc
+
 def main():
     logging.basicConfig(format='%(message)s', level=logging.INFO)
 
     # other parameters
     d = 11 # depth
     corrflag = '0' # flag if the PGN being processed is correspondence games
-    db = 0 # use database to get next GameID val
+    db = 1 # use database to get next GameID val
     db_name = 'EEHGames' # database name
     control_flag = 0 # determines file paths
-    pgn_name = 'tb_test' # name of file
+    pgn_name = 'ClosedPlayoff_20220604' # name of file
 
     # input/output stuff
     if control_flag == 1:
@@ -185,7 +329,7 @@ def main():
 
     # initiate engine
     engine_path = r'C:\Users\eehunt\Documents\Chess\ENGINES'
-    #engine_name = 'stockfish_14.1_x64'
+    #engine_name = 'stockfish_14.1_x64' # for OnlineGames
     engine_name = 'stockfish_11_x64'
     eng = engine_name + 25*' '
     eng = eng[0:25]
@@ -193,7 +337,8 @@ def main():
 
     # initiate SQL connection
     if db == 1:
-        conn = sql.connect('Driver={ODBC Driver 17 for SQL Server};Server=HUNT-PC1;Database=ChessAnalysis;Trusted_Connection=yes;')
+        conn_str = get_connstr()
+        conn = sql.connect(conn_str)
         qry_text = "SELECT IDENT_CURRENT('" + db_name + "') + 1 AS GameID"
         qry_rec = pd.read_sql(qry_text, conn).values.tolist()
         gameid = int(qry_rec[0][0])
@@ -208,135 +353,18 @@ def main():
         ctr = ctr + 1
         game_text = chess.pgn.read_game(pgn)
         board = chess.Board(chess.STARTING_FEN)
-        # TODO: Investigate if it's possible to treat PGN headers like dictionary objects and use .get() instead; eliminate the try-excepts
-        try:
-            tmnt_s = gm.find('"') + 1
-            tmnt_e = gm.find('"', tmnt_s)
-            tournament = gm[tmnt_s:tmnt_e] + 50*' '
-            tournament = tournament[0:50]
-        except:
-            tournament = 50*' '
-        try:
-            whitelast = game_text.headers['White']
-            if whitelast.find(',', 1) >= 0:
-                whitelast, whitefirst = whitelast.split(',', 2)
-                whitelast = whitelast.strip() + 50*' '
-                whitefirst = whitefirst.strip() + 25*' '
-                whitelast = whitelast[0:50]
-                whitefirst = whitefirst[0:25]
-            else:
-                whitelast = whitelast.strip() + 50*' '
-                whitelast = whitelast[0:50]
-                whitefirst = 25*' '
-        except:
-            whitelast = ''
-            whitefirst = ''
-        try:
-            blacklast = game_text.headers['Black']
-            if blacklast.find(',', 1) >= 0:
-                blacklast, blackfirst = blacklast.split(',', 2)
-                blacklast = blacklast.strip() + 50*' '
-                blackfirst = blackfirst.strip() + 25*' '
-                blacklast = blacklast[0:50]
-                blackfirst = blackfirst[0:25]
-            else:
-                blacklast = blacklast.strip() + 50*' '
-                blacklast = blacklast[0:50]
-                blackfirst = 25*' '
-        except:
-            blacklast = ''
-            blackfirst = ''
-        try:
-            whiteelo = game_text.headers['WhiteElo'] + 4*' '
-            whiteelo = whiteelo[0:4]
-        except:
-            whiteelo = 4*' '
-        try:
-            blackelo = game_text.headers['BlackElo'] + 4*' '
-            blackelo = blackelo[0:4]
-        except:
-            blackelo = 4*' '
-        try:
-            roundnum = game_text.headers['Round'] + 7*' '
-            if roundnum == '-' + 7*' ':
-                roundnum = '?' + 7*' '
-            roundnum = roundnum[0:7]
-        except:
-            roundnum = '?' + 7*' '
-        try:
-            eco = game_text.headers['ECO'] + 3*' '
-            eco = eco[0:3]
-        except:
-            eco = 3* ' '
-        try:
-            gamedate = game_text.headers['Date'] + 10*' '
-            gamedate = gamedate[0:10]
-            game_yr = int(gamedate[0:4])
-            game_mo = int(gamedate[5:7])
-            if game_mo == 1:
-                game_mo = '12'
-                game_yr = str(game_yr - 1)
-            else:
-                game_mo = game_mo - 1
-                game_mo = '0' + str(game_mo) if game_mo < 10 else str(game_mo)
-                game_yr = str(game_yr)
-            date_val = game_yr + '-' + game_mo
-        except:
-            gamedate = 10*' '
-            date_val = None
-        try:
-            result = game_text.headers['Result']
-            if result == '1-0':
-                result = '1.0'
-            elif result == '0-1':
-                result = '0.0'
-            elif result == '1/2-1/2':
-                result = '0.5'
-            else:
-                result = 3*' '
-            result = result[0:3]
-        except:
-            result = 3*' '
-        try: 
-            moves = str(math.ceil(int(game_text.headers['PlyCount'])/2)) + 3*' '
-            moves = moves[0:3]
-        except:
-            moves = 3*' '
-        try:
-            site = game_text.headers['Site']
-            if site.find('lichess', 0) >= 0:
-                src = 'Lichess' + 15*' '
-            elif site.find('Chess.com', 0) >= 0:
-                src = 'Chess.com' + 15*' '
-            elif site.find('FICS', 0) >= 0:
-                src = 'FICS' + 15*' '
-            else:
-                src = 15*' '
-            src = src[0:15]
-        except:
-            src = 15*' '
-        try:
-            site = game_text.headers['Site']
-            if site.find('lichess', 0) >= 0:
-                srcid = site.split('/')[-1] + 20*' '
-            elif site.find('Chess.com', 0) >= 0:
-                try:
-                    lnk = game_text.headers['Link']
-                    srcid = lnk.split('/')[-1] + 20*' '
-                except:
-                    srcid = 20*' '
-            elif site.find('FICS', 0) >= 0:
-                srcid = game_text.headers['FICSGamesDBGameNo'] + 20*' '
-            else:
-                srcid = 20*' '
-            srcid = srcid[0:20]
-        except:
-            srcid = 20*' '
-        try:
-            tmctrl = game_text.headers['TimeControl'] + 15*' '
-            tmctrl = tmctrl[0:15]
-        except:
-            tmctrl = 15*' '
+        tournament = format_tournament(gm)
+        whitelast, whitefirst = format_name(game_text, 'White')
+        blacklast, blackfirst = format_name(game_text, 'Black')
+        whiteelo = format_elo(game_text, 'WhiteElo')
+        blackelo = format_elo(game_text, 'BlackElo')
+        roundnum = format_round(game_text, 'Round')
+        eco = format_eco(game_text, 'ECO')
+        gamedate, date_val = format_date(game_text, 'Date')
+        result = format_result(game_text, 'Result')
+        moves = format_moves(game_text, 'PlyCount')
+        src, srcid = format_source_id(game_text, 'Site')
+        tmctrl = format_timecontrol(game_text, 'TimeControl')
         
         if whitelast == '' or blacklast == '':
             logging.info('PGN game %d was missing names and not processed!' % (ctr))
