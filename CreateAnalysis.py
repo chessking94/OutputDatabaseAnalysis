@@ -303,39 +303,39 @@ def format_timecontrol(game_text, tag):
 def main():
     logging.basicConfig(format='%(message)s', level=logging.INFO)
 
-    # other parameters
-    d = 11 # depth
-    corrflag = '0' # flag if the PGN being processed is correspondence games
-    db = 1 # use database to get next GameID val
-    db_name = 'EEHGames' # database name
-    control_flag = 0 # determines file paths
-    pgn_name = 'ClosedPlayoff_20220604' # name of file
+    # parameters
+    pgn_path = r'C:\Users\eehunt\Documents\Chess\Analysis\PGN'
+    output_path = r'C:\Users\eehunt\Documents\Chess\Analysis\Output'
+    engine_path = r'C:\Users\eehunt\Documents\Chess\ENGINES'
 
-    # input/output stuff
-    if control_flag == 1:
-        pgn_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Control Game Data\PGN'
-        output_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Control Game Data\Analysis Output'
-    else:
-        pgn_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Player Analysis\PGN'
-        output_path = r'C:\Users\eehunt\Documents\Chess\Engine Detection\Player Analysis\Analysis Output'
-    full_pgn = os.path.join(pgn_path, pgn_name) + '.pgn'
-    pgn = open(full_pgn)
-
-    # analysis output declarations
-    dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
-    output_file = pgn_name + '_Processed_' + dte + '.txt'
-    full_output = os.path.join(output_path, output_file)
+    d = 11
+    corrflag = '0'
+    db = 1
+    pgn_name = 'ThK_20220526.pgn'
+    engine_name = 'stockfish_11_x64.exe'
     row_delim = '\n'
 
+    game_type = 'Test'
+    if game_type == 'EEH':
+        d = 15
+        db_name = 'EEHGames'
+    elif game_type == 'Online':
+        db_name = 'OnlineGames'
+        engine_name = 'stockfish_14.1_x64'
+    elif game_type == 'Control':
+        db_name = 'ControlGames'
+    elif game_type == 'Test':
+        db = 0
+    else:
+        logging.critical('Invalid game type!')
+        quit()
+
     # initiate engine
-    engine_path = r'C:\Users\eehunt\Documents\Chess\ENGINES'
-    #engine_name = 'stockfish_14.1_x64' # for OnlineGames
-    engine_name = 'stockfish_11_x64'
     eng = engine_name + 25*' '
     eng = eng[0:25]
     engine = chess.engine.SimpleEngine.popen_uci(os.path.join(engine_path, engine_name))
 
-    # initiate SQL connection
+    # get game id value
     if db == 1:
         conn_str = get_connstr()
         conn = sql.connect(conn_str)
@@ -344,7 +344,14 @@ def main():
         gameid = int(qry_rec[0][0])
         conn.close()
     else:
-        gameid = 1 # hard code first gameid, if necessary
+        gameid = 1
+
+    # input/output stuff
+    dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
+    output_file = os.path.splitext(pgn_name)[0] + '_Processed_' + dte + '.txt'
+    full_pgn = os.path.join(pgn_path, pgn_name)
+    full_output = os.path.join(output_path, output_file)
+    pgn = open(full_pgn, 'r')
 
     logging.info('BEGIN PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     ctr = 0
