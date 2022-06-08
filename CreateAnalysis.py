@@ -54,7 +54,7 @@ def bookmoves(fen, date):
                     logging.info('API returned 429, waiting 65 seconds before trying again')
                     time.sleep(65)
                 else:
-                    logging.info('API returned ' + str(cde) +', skipped FEN ' + fen)
+                    logging.info(f'API returned {cde}, skipped FEN {fen}')
             
             if ct == 5: # exit ability to avoid infinite loop
                 logging.info('API rejected 5 consecutive times, skipping!')
@@ -139,7 +139,7 @@ def tbsearch(fen):
                     logging.info('API returned 429, waiting 65 seconds before trying again')
                     time.sleep(65)
                 else:
-                    logging.info('API returned ' + str(cde) +', skipped FEN ' + fen)
+                    logging.info(f'API returned {cde}, skipped FEN {fen}')
             
             if ct == 5: # exit ability to avoid infinite loop
                 logging.info('API rejected 5 consecutive times, skipping!')
@@ -161,12 +161,13 @@ def tbeval(tbdata):
             sc = '#' + tbdata[2] + 'Z' if tbdata[2].find('-') >= 0 else '#+' + tbdata[2] + 'Z'
     return sc
 
-# TODO Will need to be rewritten as part of main refactor
-def format_tournament(gm):
+def format_tournament(game_text, tag):
+    tag_text = game_text.headers.get(tag)
     tmnt_len = 50
-    tmnt_s = gm.find('"') + 1
-    tmnt_e = gm.find('"', tmnt_s)
-    tmnt = gm[tmnt_s:tmnt_e].ljust(tmnt_len, ' ')
+    tmnt = ''.ljust(tmnt_len, ' ')
+
+    if tag_text is not None:
+        tmnt = tag_text.ljust(tmnt_len, ' ')
     
     return tmnt
 
@@ -332,14 +333,14 @@ def main():
         quit()
 
     # initiate engine
-    eng = engine_name.ljust(25, ' ')
+    eng = os.path.splitext(engine_name)[0].ljust(25, ' ')
     engine = chess.engine.SimpleEngine.popen_uci(os.path.join(engine_path, engine_name))
 
     # get game id value
     if db == 1:
         conn_str = get_connstr()
         conn = sql.connect(conn_str)
-        qry_text = "SELECT IDENT_CURRENT('" + db_name + "') + 1 AS GameID"
+        qry_text = f"SELECT IDENT_CURRENT('{db_name}') + 1 AS GameID"
         qry_rec = pd.read_sql(qry_text, conn).values.tolist()
         gameid = int(qry_rec[0][0])
         conn.close()
@@ -348,19 +349,17 @@ def main():
 
     # input/output stuff
     dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
-    output_file = os.path.splitext(pgn_name)[0] + '_Processed_' + dte + '.txt'
+    output_file = f'{os.path.splitext(pgn_name)[0]}_Processed_{dte}.txt'
     full_pgn = os.path.join(pgn_path, pgn_name)
     full_output = os.path.join(output_path, output_file)
     pgn = open(full_pgn, 'r')
 
-    logging.info('BEGIN PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    ctr = 0
-    # TODO: Potentially could try and refactor out this for loop and use only chess.pgn.read_game(pgn), would need to review carefully 
-    for gm in pgn:
-        ctr = ctr + 1
-        game_text = chess.pgn.read_game(pgn)
+    logging.info(f"BEGIN PROCESSING: {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    ctr = 1
+    game_text = chess.pgn.read_game(pgn)
+    while game_text is not None:
         board = chess.Board(chess.STARTING_FEN)
-        tournament = format_tournament(gm)
+        tournament = format_tournament(game_text, 'Event')
         whitelast, whitefirst = format_name(game_text, 'White')
         blacklast, blackfirst = format_name(game_text, 'Black')
         whiteelo = format_elo(game_text, 'WhiteElo')
@@ -374,7 +373,7 @@ def main():
         tmctrl = format_timecontrol(game_text, 'TimeControl')
         
         if whitelast == '' or blacklast == '':
-            logging.info('PGN game %d was missing names and not processed!' % (ctr))
+            logging.error(f'PGN game {ctr} was missing names and not processed!')
         else:
             # RECORD 01: PRIMARY GAME INFORMATION
             with open(full_output, 'a') as f:
@@ -401,7 +400,7 @@ def main():
                     eval_properA = []
                     eval_list = []
                     move_list = []
-                    logging.info(str(ctr) + ' ' + str(gameid) + ' ' + color + ' ' + str(board.fullmove_number))
+                    logging.info(f'{ctr} {gameid} {color} {board.fullmove_number}')
                     
                     for lgl in board.legal_moves:
                         info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[lgl], options={'Threads': 8})
@@ -481,9 +480,10 @@ def main():
                     istablebase = '1'
                     tbresults = tbsearch(fen)
                     k = 0
-                    for sc in tbresults:
+                    while True:
                         if tbresults[k][0] == board.san(mv):
                             idx = k
+                            break
                         k = k + 1
                     if board.turn:
                         color = 'White'
@@ -498,7 +498,7 @@ def main():
                     fen = board.fen().ljust(92, ' ')
                     cp_loss = ''.ljust(6, ' ')
                     
-                    logging.info(str(ctr) + ' ' + str(gameid) + ' ' + color + ' ' + str(board.fullmove_number))
+                    logging.info(f'{ctr} {gameid} {color} {board.fullmove_number}')
 
                     e_time = str(round(time.time() - s_time, 4)).ljust(8, ' ')
                     
@@ -508,7 +508,7 @@ def main():
                     mv_iter = 32 if len(tbresults) >= 32 else len(tbresults)
                     for i in range(mv_iter):
                         tmp_move = str(tbresults[i][0]).ljust(7, ' ')
-                        tmp_eval - tbeval(tbresults[i]).ljust(6, ' ')
+                        tmp_eval = tbeval(tbresults[i]).ljust(6, ' ')
                         move_dict.update({'T' + str(i + 1): tmp_move})
                         eval_dict.update({'T' + str(i + 1) + '_Eval': tmp_eval})
                     
@@ -528,11 +528,15 @@ def main():
                     
                     board.push(mv)
                         
-            logging.info('Completed processing game ' + str(ctr) + ' at ' + dt.datetime.now().strftime('%H:%M:%S'))
+            logging.info(f"Completed processing game {ctr} at {dt.datetime.now().strftime('%H:%M:%S')}")
             gameid = gameid + 1
+
+        game_text = chess.pgn.read_game(pgn)
+        ctr = ctr + 1
+        
     engine.quit()
     pgn.close()
-    logging.info('END PROCESSING: ' + dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info(f"END PROCESSING: {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 if __name__ == '__main__':
