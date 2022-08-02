@@ -12,6 +12,7 @@ import pandas as pd
 import pyodbc as sql
 import requests
 
+
 def get_connstr():
     # get SQL Server connection string from private file
     fpath = r'C:\Users\eehunt\Repository'
@@ -210,6 +211,9 @@ def format_date(game_text, tag):
 
     if tag_text is not None:
         dte = tag_text.ljust(dte_len, ' ')
+        if dte.find('??') > 0: # replace any missing date parts
+            logging.warning(f'Missing date parts: {dte}')
+            dte = dte.replace('??', '01')
         yr, mo = int(dte[0:4]), int(dte[5:7])
         if mo == 1:
             yr, mo = str(yr - 1), '12'
@@ -311,13 +315,13 @@ def main():
     engine_path = r'C:\Users\eehunt\Documents\Chess\ENGINES'
 
     d = 11
-    corrflag = '0'
+    corrflag = '0' # careful!
     db = 1
-    pgn_name = 'ThK_20220526.pgn'
+    pgn_name = 'EEH_Online_All_202207.pgn'
     engine_name = 'stockfish_11_x64.exe'
     row_delim = '\n'
 
-    game_type = 'Test'
+    game_type = 'Online'
     if game_type == 'EEH':
         d = 15
         db_name = 'EEHGames'
@@ -382,9 +386,13 @@ def main():
                         roundnum + result + moves + corrflag + src + srcid + tmctrl + row_delim)
 
             istheory = '1'
-            for mv in game_text.mainline_moves():
+            for node in game_text.mainline():
+                mv = node.move
                 s_time = time.time()
                 fen = board.fen()
+                clk = str(int(node.clock())).ljust(7, ' ') if node.clock() is not None else ''.ljust(7, ' ')
+                # TODO: Implement eval comment parsing, likely need to handle mates carefully like below
+                # pgn_eval = str(round(node.eval().white().score()/100., 2))
                 
                 if istheory == '1':
                     if board.san(mv) not in bookmoves(fen, date_val):
@@ -473,7 +481,7 @@ def main():
                     with open(full_output, 'a') as f:
                         f.write('02' + gmid + movenum + color + istheory + istablebase +
                             move + mv_conc + move_eval + eval_conc + cp_loss +
-                            eng + dp + e_time + fen + row_delim)
+                            eng + dp + e_time + fen + clk + row_delim)
                     
                     board.push(mv)
                 else:
@@ -524,7 +532,7 @@ def main():
                     with open(full_output, 'a') as f:
                         f.write('02' + gmid + movenum + color + istheory + istablebase +
                             move + mv_conc + move_eval + eval_conc + cp_loss +
-                            eng + dp + e_time + fen + row_delim)
+                            eng + dp + e_time + fen + clk + row_delim)
                     
                     board.push(mv)
                         
