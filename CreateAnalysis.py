@@ -306,6 +306,16 @@ def format_timecontrol(game_text, tag):
     
     return tc
 
+def format_pgneval(eval):
+	ev = ''
+	if eval is not None:
+		if chess.engine.Score.is_mate(eval):
+			ev = str(eval)
+		else:
+			ev = str(round(int(eval.score())/100., 2))
+	
+	return ev
+
 def main():
     logging.basicConfig(format='%(message)s', level=logging.INFO)
 
@@ -321,7 +331,7 @@ def main():
     engine_name = 'stockfish_11_x64.exe'
     row_delim = '\n'
 
-    game_type = 'Online'
+    game_type = 'Test'
     if game_type == 'EEH':
         d = 15
         db_name = 'EEHGames'
@@ -391,8 +401,8 @@ def main():
                 s_time = time.time()
                 fen = board.fen()
                 clk = str(int(node.clock())).ljust(7, ' ') if node.clock() is not None else ''.ljust(7, ' ')
-                # TODO: Implement eval comment parsing, likely need to handle mates carefully like below
-                # pgn_eval = str(round(node.eval().white().score()/100., 2))
+                ev = node.eval().white() if node.eval() is not None else None
+                pgn_eval = format_pgneval(ev).ljust(6, ' ')
                 
                 if istheory == '1':
                     if board.san(mv) not in bookmoves(fen, date_val):
@@ -481,7 +491,7 @@ def main():
                     with open(full_output, 'a') as f:
                         f.write('02' + gmid + movenum + color + istheory + istablebase +
                             move + mv_conc + move_eval + eval_conc + cp_loss +
-                            eng + dp + e_time + fen + clk + row_delim)
+                            eng + dp + e_time + fen + clk + pgn_eval + row_delim)
                     
                     board.push(mv)
                 else:
@@ -532,7 +542,7 @@ def main():
                     with open(full_output, 'a') as f:
                         f.write('02' + gmid + movenum + color + istheory + istablebase +
                             move + mv_conc + move_eval + eval_conc + cp_loss +
-                            eng + dp + e_time + fen + clk + row_delim)
+                            eng + dp + e_time + fen + clk + pgn_eval + row_delim)
                     
                     board.push(mv)
                         
