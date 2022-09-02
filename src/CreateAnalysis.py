@@ -10,27 +10,27 @@ import pandas as pd
 import pyodbc as sql
 
 from api import bookmoves, tbsearch
-from conf import get_connstr
 import format
-from func import tbeval, piececount
+from func import tbeval, piececount, get_conf, get_config
 
 
 def main():
     logging.basicConfig(format='%(message)s', level=logging.INFO)
 
     # parameters
-    pgn_path = r'C:\Users\eehunt\Documents\Chess\Analysis\PGN'
-    output_path = r'C:\Users\eehunt\Documents\Chess\Analysis\Output'
-    engine_path = r'C:\Users\eehunt\Documents\Chess\ENGINES'
+    root_path = get_config(os.path.dirname(os.path.dirname(__file__)), 'rootPath')
+    pgn_path = os.path.join(root_path, 'PGN')
+    output_path = os.path.join(root_path, 'Output')
+    engine_path = get_config(os.path.dirname(os.path.dirname(__file__)), 'enginePath')
 
     d = 11
     corrflag = '0' # careful!
     db = 1
-    pgn_name = 'EEH_Online_All_202207.pgn'
-    engine_name = 'stockfish_11_x64.exe'
+    pgn_name = 'EEH_Online_All_202208.pgn'
+    engine_name = get_config(os.path.dirname(os.path.dirname(__file__)), 'engineName')
     row_delim = '\n'
 
-    game_type = 'Test'
+    game_type = 'Online'
     if game_type == 'EEH':
         d = 15
         db_name = 'EEHGames'
@@ -51,7 +51,7 @@ def main():
 
     # get game id value
     if db == 1:
-        conn_str = get_connstr()
+        conn_str = get_conf('SqlServerConnectionStringTrusted')
         conn = sql.connect(conn_str)
         qry_text = f"SELECT IDENT_CURRENT('{db_name}') + 1 AS GameID"
         qry_rec = pd.read_sql(qry_text, conn).values.tolist()
@@ -72,18 +72,18 @@ def main():
     game_text = chess.pgn.read_game(pgn)
     while game_text is not None:
         board = chess.Board(chess.STARTING_FEN)
-        tournament = format.tournament(game_text, 'Event')
-        whitelast, whitefirst = format.name(game_text, 'White')
-        blacklast, blackfirst = format.name(game_text, 'Black')
-        whiteelo = format.elo(game_text, 'WhiteElo')
-        blackelo = format.elo(game_text, 'BlackElo')
-        roundnum = format.round(game_text, 'Round')
-        eco = format.eco(game_text, 'ECO')
-        gamedate, date_val = format.date(game_text, 'Date')
-        result = format.result(game_text, 'Result')
-        moves = format.moves(game_text, 'PlyCount')
-        src, srcid = format.source_id(game_text, 'Site')
-        tmctrl = format.timecontrol(game_text, 'TimeControl')
+        tournament = format.get_tournament(game_text, 'Event')
+        whitelast, whitefirst = format.get_name(game_text, 'White')
+        blacklast, blackfirst = format.get_name(game_text, 'Black')
+        whiteelo = format.get_elo(game_text, 'WhiteElo')
+        blackelo = format.get_elo(game_text, 'BlackElo')
+        roundnum = format.get_round(game_text, 'Round')
+        eco = format.get_eco(game_text, 'ECO')
+        gamedate, date_val = format.get_date(game_text, 'Date')
+        result = format.get_result(game_text, 'Result')
+        moves = format.get_moves(game_text, 'PlyCount')
+        src, srcid = format.get_sourceid(game_text, 'Site')
+        tmctrl = format.get_timecontrol(game_text, 'TimeControl')
         
         if whitelast == '' or blacklast == '':
             logging.error(f'PGN game {ctr} was missing names and not processed!')
@@ -101,7 +101,7 @@ def main():
                 fen = board.fen()
                 clk = str(int(node.clock())).ljust(7, ' ') if node.clock() is not None else ''.ljust(7, ' ')
                 ev = node.eval().white() if node.eval() is not None else None
-                pgn_eval = format.pgneval(ev).ljust(6, ' ')
+                pgn_eval = format.get_pgneval(ev).ljust(6, ' ')
                 
                 if istheory == '1':
                     if board.san(mv) not in bookmoves(fen, date_val):
