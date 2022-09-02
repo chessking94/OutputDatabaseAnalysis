@@ -5,10 +5,10 @@ import time
 
 import requests
 
-from conf import getlichesstoken
+from func import get_conf
 
 def bookmoves(fen, date):
-    token_value = getlichesstoken()
+    token_value = get_conf('LichessAPIToken')
 
     base_url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=rapid,classical,correspondence&ratings=2000,2200,2500&fen='
     url = base_url + fen.replace(' ', '_')
@@ -41,7 +41,7 @@ def bookmoves(fen, date):
     return theory
 
 def tbsearch(fen):
-    token_value = getlichesstoken()
+    token_value = get_conf('LichessAPIToken')
 
     base_url = 'http://tablebase.lichess.ovh/standard?fen='
     url = base_url + fen.replace(' ', '_')

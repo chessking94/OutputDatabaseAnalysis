@@ -4,7 +4,7 @@ import math
 import chess.engine
 
 
-def tournament(game_text, tag):
+def get_tournament(game_text, tag):
     tag_text = game_text.headers.get(tag)
     tmnt_len = 50
     tmnt = ''.ljust(tmnt_len, ' ')
@@ -14,7 +14,7 @@ def tournament(game_text, tag):
     
     return tmnt
 
-def name(game_text, tag):
+def get_name(game_text, tag):
     tag_text = game_text.headers.get(tag)
     ret_arr = []
     lname, fname = '', ''
@@ -34,7 +34,7 @@ def name(game_text, tag):
     ret_arr.append(fname)
     return ret_arr
 
-def elo(game_text, tag):
+def get_elo(game_text, tag):
     tag_text = game_text.headers.get(tag)
     elo_len = 4
     elo = ''.ljust(elo_len, ' ')
@@ -44,7 +44,7 @@ def elo(game_text, tag):
     
     return elo
 
-def date(game_text, tag):
+def get_date(game_text, tag):
     tag_text = game_text.headers.get(tag)
     dte_arr = []
     dte_len = 10
@@ -68,7 +68,7 @@ def date(game_text, tag):
     dte_arr.append(dte_val)
     return dte_arr
 
-def round(game_text, tag):
+def get_round(game_text, tag):
     tag_text = game_text.headers.get(tag)
     rd_len = 7
     rd = '?'.ljust(rd_len, ' ')
@@ -79,7 +79,7 @@ def round(game_text, tag):
     
     return rd
 
-def eco(game_text, tag):
+def get_eco(game_text, tag):
     tag_text = game_text.headers.get(tag)
     eco_len = 3
     eco = ''.ljust(eco_len, ' ')
@@ -89,7 +89,7 @@ def eco(game_text, tag):
     
     return eco
 
-def result(game_text, tag):
+def get_result(game_text, tag):
     tag_text = game_text.headers.get(tag)
     res_len = 3
     res = ''
@@ -105,7 +105,7 @@ def result(game_text, tag):
     res = res.ljust(res_len, ' ')
     return res
 
-def moves(game_text, tag):
+def get_moves(game_text, tag):
     tag_text = game_text.headers.get(tag)
     mv_len = 3
     mv = ''.ljust(mv_len, ' ')
@@ -115,7 +115,7 @@ def moves(game_text, tag):
     
     return mv
 
-def source_id(game_text, tag):
+def get_sourceid(game_text, tag):
     tag_text = game_text.headers.get(tag)
     site_arr = []
     site_len, site_id_len = 15, 20
@@ -138,7 +138,7 @@ def source_id(game_text, tag):
     site_arr.append(site_id)
     return site_arr
 
-def timecontrol(game_text, tag):
+def get_timecontrol(game_text, tag):
     tag_text = game_text.headers.get(tag)
     tc_len = 15
     tc = ''.ljust(tc_len, ' ')
@@ -148,7 +148,7 @@ def timecontrol(game_text, tag):
     
     return tc
 
-def pgneval(eval):
+def get_pgneval(eval):
 	ev = ''
 	if eval is not None:
 		if chess.engine.Score.is_mate(eval):
