@@ -141,11 +141,6 @@ def main():
                         info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
                         move = board.san(mv)
                         move_eval = str(info['score'].white())
-                        if not board.turn:
-                            if move_eval.find('-') >= 0:
-                                move_eval = move_eval.replace('-', '+')
-                            else:
-                                move_eval = move_eval.replace('+', '-')
                         if not move_eval.startswith('#'):
                             move_eval = round(int(move_eval)/100., 2)
                     else:
