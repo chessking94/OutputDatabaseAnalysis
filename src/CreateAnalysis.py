@@ -24,7 +24,7 @@ def main():
     engine_path = get_config(os.path.dirname(os.path.dirname(__file__)), 'enginePath')
 
     d = 11
-    corrflag = '0' # careful!
+    corrflag = '0'  # careful!
     db = 1
     pgn_name = 'EEH_Online_All_202208.pgn'
     engine_name = get_config(os.path.dirname(os.path.dirname(__file__)), 'engineName')
@@ -84,13 +84,13 @@ def main():
         moves = format.get_moves(game_text, 'PlyCount')
         src, srcid = format.get_sourceid(game_text, 'Site')
         tmctrl = format.get_timecontrol(game_text, 'TimeControl')
-        
+
         if whitelast == '' or blacklast == '':
             logging.error(f'PGN game {ctr} was missing names and not processed!')
         else:
             # RECORD 01: PRIMARY GAME INFORMATION
             with open(full_output, 'a') as f:
-                f.write('01' + whitelast + whitefirst + whiteelo + blacklast + 
+                f.write('01' + whitelast + whitefirst + whiteelo + blacklast +
                         blackfirst + blackelo + eco + gamedate + tournament +
                         roundnum + result + moves + corrflag + src + srcid + tmctrl + row_delim)
 
@@ -102,23 +102,23 @@ def main():
                 clk = str(int(node.clock())).ljust(7, ' ') if node.clock() is not None else ''.ljust(7, ' ')
                 ev = node.eval().white() if node.eval() is not None else None
                 pgn_eval = format.get_pgneval(ev).ljust(6, ' ')
-                
+
                 if istheory == '1':
                     if board.san(mv) not in bookmoves(fen, date_val):
                         istheory = '0'
-                
+
                 if piececount(fen) > 7:
                     istablebase = '0'
                     if board.turn:
                         color = 'White'
                     else:
                         color = 'Black'
-                    
+
                     eval_properA = []
                     eval_list = []
                     move_list = []
                     logging.info(f'{ctr} {gameid} {color} {board.fullmove_number}')
-                    
+
                     for lgl in board.legal_moves:
                         info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[lgl], options={'Threads': 8})
                         evals = str(info['score'].white())
@@ -136,7 +136,7 @@ def main():
 
                     move_sort = [x for _, x in sorted(zip(eval_properA, move_list), reverse=board.turn)]
                     eval_sort = [y for _, y in sorted(zip(eval_properA, eval_list), reverse=board.turn)]
-                            
+
                     if board.san(mv) not in move_sort[0:31]:
                         info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
                         move = board.san(mv)
@@ -147,7 +147,7 @@ def main():
                         move = board.san(mv)
                         i = move_sort[0:31].index(move)
                         move_eval = eval_sort[i]
-                    
+
                     e_time = str(round(time.time() - s_time, 4)).ljust(8, ' ')
                     movenum = str(board.fullmove_number).ljust(3, ' ')
 
@@ -161,32 +161,32 @@ def main():
                         tmp_eval = str(eval_sort[i]).ljust(6, ' ')
                         move_dict.update({'T' + str(i + 1): tmp_move})
                         eval_dict.update({'T' + str(i + 1) + '_Eval': tmp_eval})
-                    
+
                     mv_conc = ''
                     for mv_val in move_dict:
                         mv_conc = mv_conc + move_dict[mv_val]
-                    
+
                     eval_conc = ''
                     for ev_val in eval_dict:
                         eval_conc = eval_conc + eval_dict[ev_val]
-                    
+
                     if str(eval_sort[0]).startswith('#') or str(move_eval).startswith('#'):
                         cp_loss = ''.ljust(6, ' ')
                     else:
                         cp_loss = str(round(abs(eval_sort[0] - move_eval), 2)).ljust(6, ' ')
-                    
+
                     move = move.ljust(7, ' ')
                     move_eval = str(move_eval).ljust(6, ' ')
                     gmid = str(gameid).ljust(10, ' ')
                     dp = str(d).ljust(2, ' ')
                     fen = board.fen().ljust(92, ' ')
-        
+
                     # RECORD 02: MOVE ANALYSIS
                     with open(full_output, 'a') as f:
                         f.write('02' + gmid + movenum + color + istheory + istablebase +
-                            move + mv_conc + move_eval + eval_conc + cp_loss +
-                            eng + dp + e_time + fen + clk + pgn_eval + row_delim)
-                    
+                                move + mv_conc + move_eval + eval_conc + cp_loss +
+                                eng + dp + e_time + fen + clk + pgn_eval + row_delim)
+
                     board.push(mv)
                 else:
                     istablebase = '1'
@@ -201,7 +201,7 @@ def main():
                         color = 'White'
                     else:
                         color = 'Black'
-                    
+
                     gmid = str(gameid).ljust(10, ' ')
                     movenum = str(board.fullmove_number).ljust(3, ' ')
                     move = board.san(mv).ljust(7, ' ')
@@ -209,11 +209,11 @@ def main():
                     dp = 'TB'
                     fen = board.fen().ljust(92, ' ')
                     cp_loss = ''.ljust(6, ' ')
-                    
+
                     logging.info(f'{ctr} {gameid} {color} {board.fullmove_number}')
 
                     e_time = str(round(time.time() - s_time, 4)).ljust(8, ' ')
-                    
+
                     move_dict = {'T' + str(ii + 1):  ''.ljust(7, ' ') for ii in range(32)}
                     eval_dict = {'T' + str(ii + 1) + '_Eval':  ''.ljust(6, ' ') for ii in range(32)}
 
@@ -223,29 +223,29 @@ def main():
                         tmp_eval = tbeval(tbresults[i]).ljust(6, ' ')
                         move_dict.update({'T' + str(i + 1): tmp_move})
                         eval_dict.update({'T' + str(i + 1) + '_Eval': tmp_eval})
-                    
+
                     mv_conc = ''
                     for mv_val in move_dict:
                         mv_conc = mv_conc + move_dict[mv_val]
-                    
+
                     eval_conc = ''
                     for ev_val in eval_dict:
-                        eval_conc = eval_conc + eval_dict[ev_val]                        
-        
+                        eval_conc = eval_conc + eval_dict[ev_val]
+
                     # RECORD 02: MOVE ANALYSIS
                     with open(full_output, 'a') as f:
                         f.write('02' + gmid + movenum + color + istheory + istablebase +
-                            move + mv_conc + move_eval + eval_conc + cp_loss +
-                            eng + dp + e_time + fen + clk + pgn_eval + row_delim)
-                    
+                                move + mv_conc + move_eval + eval_conc + cp_loss +
+                                eng + dp + e_time + fen + clk + pgn_eval + row_delim)
+
                     board.push(mv)
-                        
+
             logging.info(f"Completed processing game {ctr} at {dt.datetime.now().strftime('%H:%M:%S')}")
             gameid = gameid + 1
 
         game_text = chess.pgn.read_game(pgn)
         ctr = ctr + 1
-        
+
     engine.quit()
     pgn.close()
     logging.info(f"END PROCESSING: {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

@@ -7,12 +7,13 @@ import requests
 
 from func import get_conf
 
+
 def bookmoves(fen, date):
     token_value = get_conf('LichessAPIToken')
 
     base_url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=rapid,classical,correspondence&ratings=2000,2200,2500&fen='
     url = base_url + fen.replace(' ', '_')
-    if date is not None: # this check is in place to essentially avoid my own Lichess games from being referenced in the explorer API
+    if date is not None:  # this check is in place to essentially avoid my own Lichess games from being referenced in the explorer API
         url = url + '&until=' + date
 
     hdr = {'Authorization': 'Bearer ' + token_value}
@@ -33,12 +34,13 @@ def bookmoves(fen, date):
                     time.sleep(65)
                 else:
                     logging.info(f'API returned {cde}, skipped FEN {fen}')
-            
-            if ct == 5: # exit ability to avoid infinite loop
+
+            if ct == 5:  # exit ability to avoid infinite loop
                 logging.info('API rejected 5 consecutive times, skipping!')
                 cde = 200
-    
+
     return theory
+
 
 def tbsearch(fen):
     token_value = get_conf('LichessAPIToken')
@@ -85,7 +87,7 @@ def tbsearch(fen):
                     # dtz
                     z = tb_results['moves'][j]['dtz']
                     if z is not None:
-                        if z < 0: # winning
+                        if z < 0:  # winning
                             z = z - 1
                             if fen.find('w', 0) >= 0:
                                 z = z * (-1)
@@ -109,9 +111,9 @@ def tbsearch(fen):
                     time.sleep(65)
                 else:
                     logging.info(f'API returned {cde}, skipped FEN {fen}')
-            
-            if ct == 5: # exit ability to avoid infinite loop
+
+            if ct == 5:  # exit ability to avoid infinite loop
                 logging.info('API rejected 5 consecutive times, skipping!')
-                cde = 200             
+                cde = 200
 
     return info
