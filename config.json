@@ -1,5 +1,10 @@
 {
 	"rootPath": "C:/Users/eehunt/Documents/Chess/Analysis",
 	"enginePath": "C:/Users/eehunt/Documents/Chess/ENGINES",
-	"engineName": "stockfish_11_x64.exe"
+	"engineName": "stockfish_11_x64.exe",
+	"depth": 11,
+	"corrFlag": "0",
+	"useDatabase": false,
+	"pgnName": "test.pgn",
+	"gameType": "Test"
 }
