@@ -31,16 +31,16 @@ def main():
     db = bool(get_config(os.path.dirname(os.path.dirname(__file__)), 'useDatabase'))
     pgn_name = v.validate_file(pgn_path, get_config(os.path.dirname(os.path.dirname(__file__)), 'pgnName'))
 
-    game_type = v.validate_gametype(get_config(os.path.dirname(os.path.dirname(__file__)), 'gameType'))
-    if game_type == 'EEH':
+    source_name = v.validate_gametype(get_config(os.path.dirname(os.path.dirname(__file__)), 'sourceName'))
+    if source_name == 'EEH':
         d = 15
         db_name = 'EEHGames'
-    elif game_type == 'Online':
+    elif source_name == 'Online':
         db_name = 'OnlineGames'
         engine_name = 'stockfish_14.1_x64.exe'
-    elif game_type == 'Control':
+    elif source_name == 'Control':
         db_name = 'ControlGames'
-    elif game_type == 'Test':
+    elif source_name == 'Test':
         db = False
 
     # initiate engine
@@ -114,7 +114,7 @@ def main():
                         eval_properA = []
                         eval_list = []
                         move_list = []
-                        logging.info(f'{ctr} {gameid} {color} {board.fullmove_number}')
+                        logging.debug(f'{ctr} {gameid} {color} {board.fullmove_number}')
 
                         for lgl in board.legal_moves:
                             info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[lgl], options={'Threads': 8})
@@ -207,7 +207,7 @@ def main():
                         fen = board.fen().ljust(92, ' ')
                         cp_loss = ''.ljust(6, ' ')
 
-                        logging.info(f'{ctr} {gameid} {color} {board.fullmove_number}')
+                        logging.debug(f'{ctr} {gameid} {color} {board.fullmove_number}')
 
                         e_time = str(round(time.time() - s_time, 4)).ljust(8, ' ')
 

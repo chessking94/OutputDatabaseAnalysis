@@ -16,7 +16,7 @@ def validate_depth(depth):
     if not isinstance(depth, int):
         logging.critical(f'Depth {depth} is not an integer')
         raise SystemExit
-    if depth % 2 == 1:  # only want odd depths, work better with engines
+    if depth % 2 != 1:  # only want odd depths, work better with engines
         depth = depth - 1
     if depth > max_depth:
         logging.critical(f'Depth {depth} is greater than the max depth of {max_depth}')
