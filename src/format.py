@@ -1,61 +1,64 @@
 import logging
-import math
+import re
 
 import chess.engine
 
 
-def get_tournament(game_text, tag):
-    tag_text = game_text.headers.get(tag)
-    tmnt_len = 50
-    tmnt = ''.ljust(tmnt_len, ' ')
+def calc_phase(fen, last_phs):
+    # modeled off of Lichess' calulation; https://github.com/lichess-org/scalachess/blob/master/src/main/scala/Divider.scala
+    fen_str = fen.split(' ')[0]
+    majorsminors = len(re.findall('[nbrqNBRQ]', fen_str))
+    bbr = fen_str.split('/')[0]
+    wbr = fen_str.split('/')[-1]
+    bbr_ct = len(re.findall('[nbrq]', bbr))
+    wbr_ct = len(re.findall('[NBRQ]', wbr))
 
-    if tag_text is not None:
-        tmnt = tag_text.ljust(tmnt_len, ' ')
+    if majorsminors <= 6 or last_phs == 3:
+        return 3
 
-    return tmnt
+    # lichess has a complicated other feature, I'm ignoring for now
+    if majorsminors <= 10 or wbr_ct < 4 or bbr_ct < 4 or last_phs == 2:
+        return 2
+
+    return 1
 
 
-def get_name(game_text, tag):
-    tag_text = game_text.headers.get(tag)
-    ret_arr = []
-    lname, fname = '', ''
-    lname_len, fname_len = 50, 25
-
-    if tag_text is not None:
-        if tag_text.find(',', 1) >= 0:
-            lname, fname = tag_text.split(',', 2)
-            lname = lname.strip().ljust(lname_len, ' ')
-            fname = fname.strip().ljust(fname_len, ' ')
+def calc_timespent(prev_time, curr_time, incr):
+    if prev_time is None or curr_time is None:
+        if curr_time is None:
+            return ''
         else:
-            lname = tag_text.strip().ljust(lname_len, ' ')
-            fname = fname_len*' '
-            fname = fname.ljust(fname_len, ' ')
+            return 0
+    ts = int(prev_time) - int(curr_time) + int(incr)
+    if ts < 0:
+        return 0
+    else:
+        return ts
 
-    ret_arr.append(lname)
-    ret_arr.append(fname)
-    return ret_arr
 
+def format_eval(eval):
+    if eval.startswith('#'):
+        rtn = int(eval[1:len(eval)])
+        rtn = chess.engine.Mate(rtn)
+    else:
+        rtn = float(eval)
+        rtn = round(int(rtn)/100., 2)
 
-def get_elo(game_text, tag):
-    tag_text = game_text.headers.get(tag)
-    elo_len = 4
-    elo = ''.ljust(elo_len, ' ')
-
-    if tag_text is not None:
-        elo = tag_text.ljust(elo_len, ' ')
-
-    return elo
+    return rtn
 
 
 def get_date(game_text, tag):
     tag_text = game_text.headers.get(tag)
     dte_arr = []
-    dte_len = 10
-    dte = ''.ljust(dte_len, ' ')
+    dte = ''
     dte_val = None
 
-    if tag_text is not None:
-        dte = tag_text.ljust(dte_len, ' ')
+    # old Lichess games are missing the "Date" tag, use UTCDate instead
+    if not tag_text:
+        tag_text = game_text.headers.get('UTCDate')
+
+    if tag_text:
+        dte = tag_text
         if dte.find('??') > 0:  # replace any missing date parts
             logging.warning(f'Missing date parts: {dte}')
             dte = dte.replace('??', '01')
@@ -72,32 +75,26 @@ def get_date(game_text, tag):
     return dte_arr
 
 
-def get_round(game_text, tag):
+def get_name(game_text, tag):
     tag_text = game_text.headers.get(tag)
-    rd_len = 7
-    rd = '?'.ljust(rd_len, ' ')
+    ret_arr = []
+    lname, fname = '', ''
 
     if tag_text is not None:
-        rd = tag_text.ljust(rd_len, ' ')
-        rd = rd.replace('-', '?')
+        if tag_text.find(',', 1) >= 0:
+            lname, fname = tag_text.split(',', 2)
+            lname = lname.strip()
+            fname = fname.strip()
+        else:
+            lname = tag_text.strip()
 
-    return rd
-
-
-def get_eco(game_text, tag):
-    tag_text = game_text.headers.get(tag)
-    eco_len = 3
-    eco = ''.ljust(eco_len, ' ')
-
-    if tag_text is not None:
-        eco = tag_text.ljust(eco_len, ' ')
-
-    return eco
+    ret_arr.append(lname)
+    ret_arr.append(fname)
+    return ret_arr
 
 
 def get_result(game_text, tag):
     tag_text = game_text.headers.get(tag)
-    res_len = 3
     res = ''
 
     if tag_text is not None:
@@ -108,62 +105,34 @@ def get_result(game_text, tag):
         elif tag_text == '1/2-1/2':
             res = '0.5'
 
-    res = res.ljust(res_len, ' ')
     return res
-
-
-def get_moves(game_text, tag):
-    tag_text = game_text.headers.get(tag)
-    mv_len = 3
-    mv = ''.ljust(mv_len, ' ')
-
-    if tag_text is not None:
-        mv = str(math.ceil(int(tag_text)/2)).ljust(mv_len, ' ')
-
-    return mv
 
 
 def get_sourceid(game_text, tag):
     tag_text = game_text.headers.get(tag)
     site_arr = []
-    site_len, site_id_len = 15, 20
-    site, site_id = ''.ljust(site_len, ' '), ''.ljust(site_id_len, ' ')
+    site, site_id = '', ''
 
     if tag_text is not None:
         if tag_text.find('lichess', 0) >= 0:
-            site = 'Lichess'.ljust(site_len, ' ')
-            site_id = tag_text.split('/')[-1].ljust(site_id_len, ' ')
+            site = 'Lichess'
+            site_id = tag_text.split('/')[-1]
         elif tag_text.find('Chess.com', 0) >= 0:
-            site = 'Chess.com'.ljust(site_len, ' ')
+            site = 'Chess.com'
             lnk = game_text.headers.get('Link')
             if lnk is not None:
-                site_id = lnk.split('/')[-1].ljust(site_id_len, ' ')
+                site_id = lnk.split('/')[-1]
         elif tag_text.find('FICS', 0) >= 0:
-            site = 'FICS'.ljust(site_len, ' ')
-            site_id = game_text.headers.get('FICSGamesDBGameNo').ljust(site_id_len, ' ')
+            site = 'FICS'
+            site_id = game_text.headers.get('FICSGamesDBGameNo')
 
     site_arr.append(site)
     site_arr.append(site_id)
     return site_arr
 
 
-def get_timecontrol(game_text, tag):
+def get_tag(game_text, tag):
     tag_text = game_text.headers.get(tag)
-    tc_len = 15
-    tc = ''.ljust(tc_len, ' ')
-
-    if tag_text is not None:
-        tc = tag_text.ljust(tc_len, ' ')
-
-    return tc
-
-
-def get_pgneval(eval):
-    ev = ''
-    if eval is not None:
-        if chess.engine.Score.is_mate(eval):
-            ev = str(eval)
-        else:
-            ev = str(round(int(eval.score())/100., 2))
-
-    return ev
+    if not tag_text:
+        tag_text = ''
+    return tag_text

@@ -1,14 +1,10 @@
 import logging
 import os
 
+import pandas as pd
+import pyodbc as sql
 
-def validate_corrflag(corrflag):
-    corrflag = str(corrflag)
-    corrflag_list = ['0', '1']
-    if corrflag not in corrflag_list:
-        logging.warning(f'Unknown corrflag value of {corrflag} was passed, converted to 0')
-        corrflag = '0'
-    return corrflag
+from func import get_conf
 
 
 def validate_depth(depth):
@@ -31,12 +27,23 @@ def validate_file(path, file):
     return file
 
 
-def validate_gametype(type):
-    type_list = ['Control', 'EEH', 'Online', 'Test']
-    if type not in type_list:
-        logging.critical(f'Invalid game type {type} provided')
+def validate_source(src):
+    conn_str = get_conf('SqlServerConnectionStringTrusted')
+    conn = sql.connect(conn_str)
+    qry_text = 'SELECT SourceName FROM ChessWarehouse.dim.Sources'
+    source_list = pd.read_sql(qry_text, conn).stack().tolist()
+    conn.close()
+    if src not in source_list:
+        logging.critical(f'Invalid game source {src} provided')
         raise SystemExit
-    return type
+    return src
+
+
+def validate_maxmoves(num):
+    if num > 32:
+        logging.critical(f'Max move count {num} greater than 32')
+        raise SystemExit
+    return num
 
 
 def validate_path(path, type):

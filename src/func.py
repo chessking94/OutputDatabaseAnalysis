@@ -42,3 +42,10 @@ def piececount(fen):
         if x.isalpha():
             ct = ct + 1
     return ct
+
+
+def get_parentdirs(path, levels):
+    rtn_path = path
+    for _ in range(levels):
+        rtn_path = os.path.dirname(rtn_path)
+    return rtn_path

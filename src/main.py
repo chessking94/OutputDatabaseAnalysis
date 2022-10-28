@@ -1,7 +1,7 @@
+import csv
 import datetime as dt
 import logging
 import os
-import time
 
 import chess
 import chess.engine
@@ -11,240 +11,206 @@ import pyodbc as sql
 
 from api import bookmoves, tbsearch
 import format
-from func import tbeval, piececount, get_conf, get_config
+from func import tbeval, piececount, get_conf, get_config, get_parentdirs
 import validate as v
+
+DELIM = '\t'
 
 
 def main():
-    logging.basicConfig(format='%(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s\t%(funcName)s\t%(levelname)s\t%(message)s', level=logging.INFO)
+    logging.info('START PROCESSING')
+
+    config_path = get_parentdirs(os.path.dirname(__file__), 1)
 
     # parameters
-    root_path = v.validate_path(get_config(os.path.dirname(os.path.dirname(__file__)), 'rootPath'), 'root')
+    root_path = v.validate_path(get_config(config_path, 'rootPath'), 'root')
     pgn_path = os.path.join(root_path, 'PGN')
     output_path = os.path.join(root_path, 'Output')
-    engine_path = v.validate_path(get_config(os.path.dirname(os.path.dirname(__file__)), 'enginePath'), 'engine')
-    engine_name = v.validate_file(engine_path, get_config(os.path.dirname(os.path.dirname(__file__)), 'engineName'))
-    row_delim = '\n'
+    engine_path = v.validate_path(get_config(config_path, 'enginePath'), 'engine')
+    pgn_name = v.validate_file(pgn_path, get_config(config_path, 'pgnName'))
+    source_name = v.validate_source(get_config(config_path, 'sourceName'))
 
-    d = v.validate_depth(get_config(os.path.dirname(os.path.dirname(__file__)), 'depth'))
-    corrflag = v.validate_corrflag(get_config(os.path.dirname(os.path.dirname(__file__)), 'corrFlag'))
-    db = bool(get_config(os.path.dirname(os.path.dirname(__file__)), 'useDatabase'))
-    pgn_name = v.validate_file(pgn_path, get_config(os.path.dirname(os.path.dirname(__file__)), 'pgnName'))
-
-    source_name = v.validate_gametype(get_config(os.path.dirname(os.path.dirname(__file__)), 'sourceName'))
-    if source_name == 'EEH':
-        d = 15
-        db_name = 'EEHGames'
-    elif source_name == 'Online':
-        db_name = 'OnlineGames'
-        engine_name = 'stockfish_14.1_x64.exe'
-    elif source_name == 'Control':
-        db_name = 'ControlGames'
-    elif source_name == 'Test':
-        db = False
+    source_params = get_config(config_path, 'sourceParameters')[source_name]
+    d = v.validate_depth(source_params['depth'])
+    engine_name = source_params['engineName']
+    seed_gameid = source_params['seedGameID']
+    openings = source_params['useOpeningExplorer']
+    tblbase = source_params['useTablebaseExplorer']
+    max_moves = v.validate_maxmoves(source_params['maxMoves'])
+    tmctrl_default = get_config(config_path, 'timeControlDetailDefault')
 
     # initiate engine
-    eng = os.path.splitext(engine_name)[0].ljust(25, ' ')
+    eng = os.path.splitext(engine_name)[0]
     engine = chess.engine.SimpleEngine.popen_uci(os.path.join(engine_path, engine_name))
 
-    # get game id value
-    if db:
+    # get next game id value
+    if seed_gameid:
         conn_str = get_conf('SqlServerConnectionStringTrusted')
         conn = sql.connect(conn_str)
-        qry_text = f"SELECT IDENT_CURRENT('{db_name}') + 1 AS GameID"
-        qry_rec = pd.read_sql(qry_text, conn).values.tolist()
-        gameid = int(qry_rec[0][0])
+        qry_text = f"""
+SELECT
+ISNULL(MAX(CAST(g.SiteGameID AS int)), 0) + 1
+
+FROM ChessWarehouse.lake.Games g
+JOIN ChessWarehouse.dim.Sources src ON g.SourceID = src.SourceID
+
+WHERE src.SourceName = '{source_name}'
+"""
+        seed = int(pd.read_sql(qry_text, conn).values[0][0])
         conn.close()
     else:
-        gameid = 1
+        seed = 1
 
     # input/output stuff
     dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
-    output_file = f'{os.path.splitext(pgn_name)[0]}_Processed_{dte}.txt'
+    output_file = f'{os.path.splitext(pgn_name)[0]}_{dte}.game'
     full_pgn = os.path.join(pgn_path, pgn_name)
     full_output = os.path.join(output_path, output_file)
     with open(full_pgn, mode='r', encoding='utf-8') as pgn:
-        logging.info(f"BEGIN PROCESSING: {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         ctr = 1
         game_text = chess.pgn.read_game(pgn)
         while game_text is not None:
             board = chess.Board(chess.STARTING_FEN)
-            tournament = format.get_tournament(game_text, 'Event')
+            eventname = format.get_tag(game_text, 'Event')
             whitelast, whitefirst = format.get_name(game_text, 'White')
             blacklast, blackfirst = format.get_name(game_text, 'Black')
-            whiteelo = format.get_elo(game_text, 'WhiteElo')
-            blackelo = format.get_elo(game_text, 'BlackElo')
-            roundnum = format.get_round(game_text, 'Round')
-            eco = format.get_eco(game_text, 'ECO')
+            whiteelo = format.get_tag(game_text, 'WhiteElo')
+            blackelo = format.get_tag(game_text, 'BlackElo')
+            roundnum = format.get_tag(game_text, 'Round')
+            eco = format.get_tag(game_text, 'ECO')
             gamedate, date_val = format.get_date(game_text, 'Date')
+            gametime = format.get_tag(game_text, 'UTCTime')
             result = format.get_result(game_text, 'Result')
-            moves = format.get_moves(game_text, 'PlyCount')
-            src, srcid = format.get_sourceid(game_text, 'Site')
-            tmctrl = format.get_timecontrol(game_text, 'TimeControl')
+            site, gameid = format.get_sourceid(game_text, 'Site')
+            if not gameid:
+                gameid = seed
+            tmctrl = format.get_tag(game_text, 'TimeControl')
+            if not tmctrl:
+                tmctrl = tmctrl_default
+            incr = tmctrl[tmctrl.index('+')+1:len(tmctrl)].strip() if '+' in tmctrl else '0'
+            game_rec = [
+                'G', source_name, site, gameid,
+                whitelast, whitefirst, blacklast, blackfirst, whiteelo, blackelo,
+                tmctrl, eco, gamedate, gametime, eventname, roundnum, result
+            ]
+            while len(game_rec) <= 79:
+                game_rec.append('')
 
             if whitelast == '' or blacklast == '':
                 logging.error(f'PGN game {ctr} was missing names and not processed!')
             else:
-                # RECORD 01: PRIMARY GAME INFORMATION
-                with open(full_output, 'a') as f:
-                    f.write('01' + whitelast + whitefirst + whiteelo + blacklast +
-                            blackfirst + blackelo + eco + gamedate + tournament +
-                            roundnum + result + moves + corrflag + src + srcid + tmctrl + row_delim)
+                # GAME RECORD
+                with open(full_output, 'a', newline='') as f:
+                    writer = csv.writer(f, delimiter=DELIM)
+                    writer.writerow(game_rec)
 
-                istheory = '1'
+                istheory = 1 if openings else 0
+                phaseid = 1
+                white_prevtime = None
+                black_prevtime = None
+
                 for node in game_text.mainline():
                     mv = node.move
-                    s_time = time.time()
+                    move = board.san(mv)
                     fen = board.fen()
-                    clk = str(int(node.clock())).ljust(7, ' ') if node.clock() is not None else ''.ljust(7, ' ')
-                    ev = node.eval().white() if node.eval() is not None else None
-                    pgn_eval = format.get_pgneval(ev).ljust(6, ' ')
+                    movenum = board.fullmove_number
+                    color = 'White' if board.turn else 'Black'
 
-                    if istheory == '1':
+                    logging.debug(f'{ctr} {seed} {color} {movenum}')
+
+                    if istheory == 1:
                         if board.san(mv) not in bookmoves(fen, date_val):
-                            istheory = '0'
-
-                    if piececount(fen) > 7:
-                        istablebase = '0'
-                        if board.turn:
-                            color = 'White'
-                        else:
-                            color = 'Black'
-
-                        eval_properA = []
-                        eval_list = []
-                        move_list = []
-                        logging.debug(f'{ctr} {gameid} {color} {board.fullmove_number}')
-
-                        for lgl in board.legal_moves:
-                            info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[lgl], options={'Threads': 8})
-                            evals = str(info['score'].white())
-                            move_list.append(board.san(lgl))
-
-                            if evals.startswith('#'):
-                                eval_p = int(evals[1:len(evals)])
-                                eval_properA.append(chess.engine.Mate(eval_p))
-                                eval_list.append(evals)
-                            else:
-                                eval_p = float(evals)
-                                eval_properA.append(chess.engine.Cp(eval_p))
-                                evals = round(int(evals)/100., 2)
-                                eval_list.append(evals)
-
-                        move_sort = [x for _, x in sorted(zip(eval_properA, move_list), reverse=board.turn)]
-                        eval_sort = [y for _, y in sorted(zip(eval_properA, eval_list), reverse=board.turn)]
-
-                        if board.san(mv) not in move_sort[0:31]:
-                            info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
-                            move = board.san(mv)
-                            move_eval = str(info['score'].white())
-                            if not move_eval.startswith('#'):
-                                move_eval = round(int(move_eval)/100., 2)
-                        else:
-                            move = board.san(mv)
-                            i = move_sort[0:31].index(move)
-                            move_eval = eval_sort[i]
-
-                        e_time = str(round(time.time() - s_time, 4)).ljust(8, ' ')
-                        movenum = str(board.fullmove_number).ljust(3, ' ')
-
-                        # create dictionaries of moves and evals
-                        move_dict = {'T' + str(ii + 1):  ''.ljust(7, ' ') for ii in range(32)}
-                        eval_dict = {'T' + str(ii + 1) + '_Eval':  ''.ljust(6, ' ') for ii in range(32)}
-
-                        mv_iter = 32 if len(move_sort) >= 32 else len(move_sort)
-                        for i in range(mv_iter):
-                            tmp_move = str(move_sort[i]).ljust(7, ' ')
-                            tmp_eval = str(eval_sort[i]).ljust(6, ' ')
-                            move_dict.update({'T' + str(i + 1): tmp_move})
-                            eval_dict.update({'T' + str(i + 1) + '_Eval': tmp_eval})
-
-                        mv_conc = ''
-                        for mv_val in move_dict:
-                            mv_conc = mv_conc + move_dict[mv_val]
-
-                        eval_conc = ''
-                        for ev_val in eval_dict:
-                            eval_conc = eval_conc + eval_dict[ev_val]
-
-                        if str(eval_sort[0]).startswith('#') or str(move_eval).startswith('#'):
-                            cp_loss = ''.ljust(6, ' ')
-                        else:
-                            cp_loss = str(round(abs(eval_sort[0] - move_eval), 2)).ljust(6, ' ')
-
-                        move = move.ljust(7, ' ')
-                        move_eval = str(move_eval).ljust(6, ' ')
-                        gmid = str(gameid).ljust(10, ' ')
-                        dp = str(d).ljust(2, ' ')
-                        fen = board.fen().ljust(92, ' ')
-
-                        # RECORD 02: MOVE ANALYSIS
-                        with open(full_output, 'a') as f:
-                            f.write('02' + gmid + movenum + color + istheory + istablebase +
-                                    move + mv_conc + move_eval + eval_conc + cp_loss +
-                                    eng + dp + e_time + fen + clk + pgn_eval + row_delim)
-
-                        board.push(mv)
+                            istheory = 0
+                    istablebase = 0
+                    if tblbase:
+                        istablebase = 1 if piececount(fen) <= 7 else istablebase
+                    clk = int(node.clock()) if node.clock() is not None else ''
+                    if color == 'White':
+                        ts = format.calc_timespent(white_prevtime, node.clock(), incr)
+                        white_prevtime = node.clock()
                     else:
-                        istablebase = '1'
+                        ts = format.calc_timespent(black_prevtime, node.clock(), incr)
+                        black_prevtime = node.clock()
+                    phaseid = format.calc_phase(fen, phaseid)
+
+                    move_dict = {'T' + str(ii + 1):  '' for ii in range(max_moves)}
+                    eval_dict = {'T' + str(ii + 1) + '_Eval':  '' for ii in range(max_moves)}
+
+                    if not istablebase:
+                        dp = d
+                        info = engine.analyse(board, limit=chess.engine.Limit(depth=d), multipv=max_moves, options={'Threads': 8})
+                        i = 1
+                        for line in info:
+                            tmp_move = board.san(line['pv'][0])
+                            tmp_eval = format.format_eval(str(line['score'].white()))
+                            move_dict.update({'T' + str(i): tmp_move})
+                            eval_dict.update({'T' + str(i) + '_Eval': tmp_eval})
+                            i = i + 1
+
+                        if move not in move_dict.values():
+                            info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
+                            move_eval = format.format_eval(str(info['score'].white()))
+                            move_rank = max_moves + 1
+                        else:
+                            key = [k for k, v in move_dict.items() if v == move]
+                            move_eval = eval_dict[f'{key[0]}_Eval']
+                            evm_list = [int(k[1:3].strip('_')) for k, v in eval_dict.items() if v == move_eval]
+                            move_rank = min(evm_list)
+                    else:
                         tbresults = tbsearch(fen)
                         k = 0
-                        while True:
-                            if tbresults[k][0] == board.san(mv):
-                                idx = k
+                        for entry in tbresults:
+                            if entry[0] == board.san(mv):
+                                move_rank = k
                                 break
                             k = k + 1
-                        if board.turn:
-                            color = 'White'
-                        else:
-                            color = 'Black'
 
-                        gmid = str(gameid).ljust(10, ' ')
-                        movenum = str(board.fullmove_number).ljust(3, ' ')
-                        move = board.san(mv).ljust(7, ' ')
-                        move_eval = tbeval(tbresults[idx]).ljust(6, ' ')
-                        dp = 'TB'
-                        fen = board.fen().ljust(92, ' ')
-                        cp_loss = ''.ljust(6, ' ')
+                        move_eval = tbeval(tbresults[move_rank])
+                        dp = 0
 
-                        logging.debug(f'{ctr} {gameid} {color} {board.fullmove_number}')
-
-                        e_time = str(round(time.time() - s_time, 4)).ljust(8, ' ')
-
-                        move_dict = {'T' + str(ii + 1):  ''.ljust(7, ' ') for ii in range(32)}
-                        eval_dict = {'T' + str(ii + 1) + '_Eval':  ''.ljust(6, ' ') for ii in range(32)}
-
-                        mv_iter = 32 if len(tbresults) >= 32 else len(tbresults)
+                        mv_iter = min(max_moves, len(tbresults))
                         for i in range(mv_iter):
-                            tmp_move = str(tbresults[i][0]).ljust(7, ' ')
-                            tmp_eval = tbeval(tbresults[i]).ljust(6, ' ')
+                            tmp_move = str(tbresults[i][0])
+                            tmp_eval = tbeval(tbresults[i])
                             move_dict.update({'T' + str(i + 1): tmp_move})
                             eval_dict.update({'T' + str(i + 1) + '_Eval': tmp_eval})
 
-                        mv_conc = ''
-                        for mv_val in move_dict:
-                            mv_conc = mv_conc + move_dict[mv_val]
+                        evm_list = [int(k[1:3].strip('_')) for k, v in eval_dict.items() if v == move_eval]
+                        move_rank = min(evm_list)
 
-                        eval_conc = ''
-                        for ev_val in eval_dict:
-                            eval_conc = eval_conc + eval_dict[ev_val]
+                    t1_eval = eval_dict['T1_Eval']
+                    if str(t1_eval).startswith('#') or str(move_eval).startswith('#'):
+                        cp_loss = ''
+                    else:
+                        cp_loss = '{:3.2f}'.format(abs(t1_eval - move_eval))
 
-                        # RECORD 02: MOVE ANALYSIS
-                        with open(full_output, 'a') as f:
-                            f.write('02' + gmid + movenum + color + istheory + istablebase +
-                                    move + mv_conc + move_eval + eval_conc + cp_loss +
-                                    eng + dp + e_time + fen + clk + pgn_eval + row_delim)
+                    move_rec = [
+                        'M', gameid, movenum, color, istheory, istablebase, eng, dp, clk, ts, fen, phaseid,
+                        move, move_eval, move_rank, cp_loss
+                    ]
+                    for i in range(max_moves):
+                        move_rec.append(move_dict[f'T{i + 1}'])
+                        move_rec.append(eval_dict[f'T{i + 1}_Eval'])
 
-                        board.push(mv)
+                    while len(move_rec) <= 79:
+                        move_rec.append('')
 
-                logging.info(f"Completed processing game {ctr} at {dt.datetime.now().strftime('%H:%M:%S')}")
-                gameid = gameid + 1
+                    # MOVE RECORD
+                    with open(full_output, 'a', newline='') as f:
+                        writer = csv.writer(f, delimiter=DELIM)
+                        writer.writerow(move_rec)
+
+                    board.push(mv)
+
+                logging.info(f'Completed processing game {ctr}')
+                seed = seed + 1
 
             game_text = chess.pgn.read_game(pgn)
             ctr = ctr + 1
 
     engine.quit()
-    logging.info(f"END PROCESSING: {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logging.info('END PROCESSING')
 
 
 if __name__ == '__main__':
