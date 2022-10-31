@@ -68,7 +68,7 @@ def tbsearch(fen):
 
                     # dtm
                     m = tb_results['moves'][j]['dtm']
-                    if m is not None:
+                    if m:
                         if m < 0:
                             m = m - 1
                             if fen.find('w', 0) >= 0:
@@ -80,13 +80,17 @@ def tbsearch(fen):
                                 m = m * (-1)
                             m = math.ceil(m/2)
                         else:
-                            pass
+                            if tb_results['moves'][j]['checkmate']:
+                                if fen.find('w', 0) >= 0:
+                                    m = 1
+                                else:
+                                    m = -1
                         m = str(m)
                     tbmove.append(m)
 
                     # dtz
                     z = tb_results['moves'][j]['dtz']
-                    if z is not None:
+                    if z:
                         if z < 0:  # winning
                             z = z - 1
                             if fen.find('w', 0) >= 0:
@@ -98,7 +102,11 @@ def tbsearch(fen):
                                 z = z * (-1)
                             z = math.ceil(z/2)
                         else:
-                            pass
+                            if tb_results['moves'][j]['checkmate']:
+                                if fen.find('w', 0) >= 0:
+                                    m = 1
+                                else:
+                                    m = -1
                         z = str(z)
                     tbmove.append(z)
 

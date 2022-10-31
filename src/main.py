@@ -180,7 +180,7 @@ WHERE src.SourceName = '{source_name}'
                         move_rank = min(evm_list)
 
                     t1_eval = eval_dict['T1_Eval']
-                    if str(t1_eval).startswith('#') or str(move_eval).startswith('#'):
+                    if str(t1_eval).startswith('#') or str(move_eval).startswith('#') or istablebase:
                         cp_loss = ''
                     else:
                         cp_loss = '{:3.2f}'.format(abs(t1_eval - move_eval))
