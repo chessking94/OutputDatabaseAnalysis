@@ -16,6 +16,8 @@ import validate as v
 
 DELIM = '\t'
 
+# TODO: Investigate the possibility of a move depth record; i.e. one that lists the top move/eval at a given depth
+
 
 def main():
     logging.basicConfig(format='%(asctime)s\t%(funcName)s\t%(levelname)s\t%(message)s', level=logging.INFO)
@@ -67,6 +69,12 @@ WHERE src.SourceName = '{source_name}'
     output_file = f'{os.path.splitext(pgn_name)[0]}_{dte}.game'
     full_pgn = os.path.join(pgn_path, pgn_name)
     full_output = os.path.join(output_path, output_file)
+    with open(full_pgn, mode='r', encoding='utf-8') as gmct:
+        tot_gms = 0
+        search_text = '[Event "'
+        for line in gmct:
+            if search_text in line:
+                tot_gms = tot_gms + 1
     with open(full_pgn, mode='r', encoding='utf-8') as pgn:
         ctr = 1
         game_text = chess.pgn.read_game(pgn)
@@ -203,7 +211,7 @@ WHERE src.SourceName = '{source_name}'
 
                     board.push(mv)
 
-                logging.info(f'Completed processing game {ctr}')
+                logging.info(f'Completed processing game {ctr} of {tot_gms}')
                 seed = seed + 1
 
             game_text = chess.pgn.read_game(pgn)
