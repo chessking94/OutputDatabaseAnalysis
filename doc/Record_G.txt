@@ -1,0 +1,18 @@
+RecordKey	FieldPosition	FieldName
+G	1	Record ID
+G	2	Source Name
+G	3	Site Name
+G	4	Game ID
+G	5	White Last Name
+G	6	White First Name
+G	7	Black Last Name
+G	8	Black First Name
+G	9	White Elo Rating
+G	10	Black Elo Rating
+G	11	Time Control
+G	12	ECO Code
+G	13	Game Date
+G	14	Game Time
+G	15	Event Name
+G	16	Round Number
+G	17	Result

@@ -1,0 +1,81 @@
+RecordKey	FieldPosition	FieldName
+M	1	Record Key
+M	2	Game ID
+M	3	Move Number
+M	4	Color
+M	5	Is Theory
+M	6	Is Tablebase
+M	7	Engine
+M	8	Depth
+M	9	Clock
+M	10	Time Spent
+M	11	FEN
+M	12	Phase ID
+M	13	Move Played
+M	14	Move Played Evaluation
+M	15	Move Played Rank
+M	16	Centipawn Loss
+M	17	Engine Move #1
+M	18	Engine Move #1 Evaluation
+M	19	Engine Move #2
+M	20	Engine Move #2 Evaluation
+M	21	Engine Move #3
+M	22	Engine Move #3 Evaluation
+M	23	Engine Move #4
+M	24	Engine Move #4 Evaluation
+M	25	Engine Move #5
+M	26	Engine Move #5 Evaluation
+M	27	Engine Move #6
+M	28	Engine Move #6 Evaluation
+M	29	Engine Move #7
+M	30	Engine Move #7 Evaluation
+M	31	Engine Move #8
+M	32	Engine Move #8 Evaluation
+M	33	Engine Move #9
+M	34	Engine Move #9 Evaluation
+M	35	Engine Move #10
+M	36	Engine Move #10 Evaluation
+M	37	Engine Move #11
+M	38	Engine Move #11 Evaluation
+M	39	Engine Move #12
+M	40	Engine Move #12 Evaluation
+M	41	Engine Move #13
+M	42	Engine Move #13 Evaluation
+M	43	Engine Move #14
+M	44	Engine Move #14 Evaluation
+M	45	Engine Move #15
+M	46	Engine Move #15 Evaluation
+M	47	Engine Move #16
+M	48	Engine Move #16 Evaluation
+M	49	Engine Move #17
+M	50	Engine Move #17 Evaluation
+M	51	Engine Move #18
+M	52	Engine Move #18 Evaluation
+M	53	Engine Move #19
+M	54	Engine Move #19 Evaluation
+M	55	Engine Move #20
+M	56	Engine Move #20 Evaluation
+M	57	Engine Move #21
+M	58	Engine Move #21 Evaluation
+M	59	Engine Move #22
+M	60	Engine Move #22 Evaluation
+M	61	Engine Move #23
+M	62	Engine Move #23 Evaluation
+M	63	Engine Move #24
+M	64	Engine Move #24 Evaluation
+M	65	Engine Move #25
+M	66	Engine Move #25 Evaluation
+M	67	Engine Move #26
+M	68	Engine Move #26 Evaluation
+M	69	Engine Move #27
+M	70	Engine Move #27 Evaluation
+M	71	Engine Move #28
+M	72	Engine Move #28 Evaluation
+M	73	Engine Move #29
+M	74	Engine Move #29 Evaluation
+M	75	Engine Move #30
+M	76	Engine Move #30 Evaluation
+M	77	Engine Move #31
+M	78	Engine Move #31 Evaluation
+M	79	Engine Move #32
+M	80	Engine Move #32 Evaluation
