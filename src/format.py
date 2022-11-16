@@ -41,8 +41,11 @@ def format_eval(eval):
         rtn = int(eval[1:len(eval)])
         rtn = chess.engine.Mate(rtn)
     else:
-        rtn = float(eval)
-        rtn = round(int(rtn)/100., 2)
+        if eval:
+            rtn = float(eval)
+            rtn = round(int(rtn)/100., 2)
+        else:
+            rtn = eval
 
     return rtn
 

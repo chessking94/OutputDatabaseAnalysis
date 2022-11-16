@@ -17,6 +17,9 @@ import validate as v
 DELIM = '\t'
 
 # TODO: Investigate the possibility of a move depth record; i.e. one that lists the top move/eval at a given depth
+# TODO: Analyze initial segment of Lichess bullet and blitz games; at least 50k each
+# TODO: Figure out way to (efficiently) add IsTheory and IsTablebase for Lichess games. I think including these are padding stats.
+#       This as alternative is simply to exclude all moves before move #X and moves after move #Y
 
 
 def main():
@@ -142,52 +145,64 @@ WHERE src.SourceName = '{source_name}'
                         black_prevtime = node.clock()
                     phaseid = format.calc_phase(fen, phaseid)
 
-                    move_dict = {'T' + str(ii + 1):  '' for ii in range(max_moves)}
-                    eval_dict = {'T' + str(ii + 1) + '_Eval':  '' for ii in range(max_moves)}
+                    move_arr = ['' for ii in range(max_moves)]
+                    eval_arr = ['' for ii in range(max_moves)]
 
                     if not istablebase:
                         dp = d
                         info = engine.analyse(board, limit=chess.engine.Limit(depth=d), multipv=max_moves, options={'Threads': 8})
-                        i = 1
+                        i = 0
                         for line in info:
                             tmp_move = board.san(line['pv'][0])
                             tmp_eval = format.format_eval(str(line['score'].white()))
-                            move_dict.update({'T' + str(i): tmp_move})
-                            eval_dict.update({'T' + str(i) + '_Eval': tmp_eval})
+                            move_arr[i] = tmp_move
+                            eval_arr[i] = line['score'].white()
                             i = i + 1
 
-                        if move not in move_dict.values():
+                        if move not in move_arr:
                             info = engine.analyse(board, chess.engine.Limit(depth=d), root_moves=[mv], options={'Threads': 8})
-                            move_eval = format.format_eval(str(info['score'].white()))
-                            move_rank = max_moves + 1
+                            move_eval = info['score'].white()
+
+                            for ix, x in enumerate(eval_arr):
+                                if color == 'White':
+                                    a, b = move_eval, x
+                                else:
+                                    a, b = x, move_eval
+                                if a >= b:
+                                    move_arr.insert(ix, move)
+                                    eval_arr.insert(ix, move_eval)
+                                    break
+                        if move in move_arr:
+                            idx = move_arr.index(move)
+                            move_eval = format.format_eval(str(eval_arr[idx]))
                         else:
-                            key = [k for k, v in move_dict.items() if v == move]
-                            move_eval = eval_dict[f'{key[0]}_Eval']
-                            evm_list = [int(k[1:3].strip('_')) for k, v in eval_dict.items() if v == move_eval]
-                            move_rank = min(evm_list)
+                            move_eval = format.format_eval(str(move_eval))
+                        eval_arr = [format.format_eval(str(ev)) for ev in eval_arr]
                     else:
                         tbresults = tbsearch(fen)
                         k = 0
                         for entry in tbresults:
                             if entry[0] == board.san(mv):
-                                move_rank = k
+                                move_idx = k
                                 break
                             k = k + 1
 
-                        move_eval = tbeval(tbresults[move_rank])
+                        move_eval = tbeval(tbresults[move_idx])
                         dp = 0
 
                         mv_iter = min(max_moves, len(tbresults))
                         for i in range(mv_iter):
                             tmp_move = str(tbresults[i][0])
                             tmp_eval = tbeval(tbresults[i])
-                            move_dict.update({'T' + str(i + 1): tmp_move})
-                            eval_dict.update({'T' + str(i + 1) + '_Eval': tmp_eval})
+                            move_arr[i] = tmp_move
+                            eval_arr[i] = tmp_eval
 
-                        evm_list = [int(k[1:3].strip('_')) for k, v in eval_dict.items() if v == move_eval]
-                        move_rank = min(evm_list)
+                    if move_eval in eval_arr:
+                        move_rank = eval_arr.index(move_eval) + 1
+                    else:
+                        move_rank = max_moves + 1
 
-                    t1_eval = eval_dict['T1_Eval']
+                    t1_eval = eval_arr[0]
                     if str(t1_eval).startswith('#') or str(move_eval).startswith('#') or istablebase:
                         cp_loss = ''
                     else:
@@ -198,8 +213,8 @@ WHERE src.SourceName = '{source_name}'
                         move, move_eval, move_rank, cp_loss
                     ]
                     for i in range(max_moves):
-                        move_rec.append(move_dict[f'T{i + 1}'])
-                        move_rec.append(eval_dict[f'T{i + 1}_Eval'])
+                        move_rec.append(move_arr[i])
+                        move_rec.append(eval_arr[i])
 
                     while len(move_rec) <= 79:
                         move_rec.append('')
