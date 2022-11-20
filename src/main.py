@@ -17,9 +17,8 @@ import validate as v
 DELIM = '\t'
 
 # TODO: Investigate the possibility of a move depth record; i.e. one that lists the top move/eval at a given depth
-# TODO: Analyze initial segment of Lichess bullet and blitz games; at least 50k each
-# TODO: Figure out way to (efficiently) add IsTheory and IsTablebase for Lichess games. I think including these are padding stats.
-#       This as alternative is simply to exclude all moves before move #X and moves after move #Y
+# TODO: Analyze initial segment of Lichess bullet and blitz games; take first 2000 games in each 2200+ file
+#       Can pull different rating segments ad-hoc if I to fill in holes
 
 
 def main():
@@ -44,6 +43,7 @@ def main():
     tblbase = source_params['useTablebaseExplorer']
     max_moves = v.validate_maxmoves(source_params['maxMoves'])
     tmctrl_default = get_config(config_path, 'timeControlDetailDefault')
+    istheorydefault = get_config(config_path, 'isTheoryDefault')
 
     # initiate engine
     eng = os.path.splitext(engine_name)[0]
@@ -116,7 +116,7 @@ WHERE src.SourceName = '{source_name}'
                     writer = csv.writer(f, delimiter=DELIM)
                     writer.writerow(game_rec)
 
-                istheory = 1 if openings else 0
+                istheory = 1
                 phaseid = 1
                 white_prevtime = None
                 black_prevtime = None
@@ -131,11 +131,13 @@ WHERE src.SourceName = '{source_name}'
                     logging.debug(f'{ctr} {seed} {color} {movenum}')
 
                     if istheory == 1:
-                        if board.san(mv) not in bookmoves(fen, date_val):
-                            istheory = 0
-                    istablebase = 0
-                    if tblbase:
-                        istablebase = 1 if piececount(fen) <= 7 else istablebase
+                        if openings:
+                            if board.san(mv) not in bookmoves(fen, date_val):
+                                istheory = 0
+                        else:
+                            if movenum > istheorydefault:
+                                istheory = 0
+                    istablebase = 1 if piececount(fen) <= 7 else 0
                     clk = int(node.clock()) if node.clock() is not None else ''
                     if color == 'White':
                         ts = format.calc_timespent(white_prevtime, node.clock(), incr)
@@ -148,7 +150,7 @@ WHERE src.SourceName = '{source_name}'
                     move_arr = ['' for ii in range(max_moves)]
                     eval_arr = ['' for ii in range(max_moves)]
 
-                    if not istablebase:
+                    if not istablebase or not tblbase:
                         dp = d
                         info = engine.analyse(board, limit=chess.engine.Limit(depth=d), multipv=max_moves, options={'Threads': 8})
                         i = 0
