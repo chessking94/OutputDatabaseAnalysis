@@ -17,8 +17,7 @@ import validate as v
 DELIM = '\t'
 
 # TODO: Investigate the possibility of a move depth record; i.e. one that lists the top move/eval at a given depth
-# TODO: Analyze initial segment of Lichess bullet and blitz games; take first 2000 games in each 2200+ file
-#       Can pull different rating segments ad-hoc if I to fill in holes
+# TODO: New game source for Chess.com and/or accounts closed as cheating
 
 
 def main():
@@ -83,20 +82,21 @@ WHERE src.SourceName = '{source_name}'
         game_text = chess.pgn.read_game(pgn)
         while game_text is not None:
             board = chess.Board(chess.STARTING_FEN)
-            eventname = format.get_tag(game_text, 'Event')
-            whitelast, whitefirst = format.get_name(game_text, 'White')
-            blacklast, blackfirst = format.get_name(game_text, 'Black')
-            whiteelo = format.get_tag(game_text, 'WhiteElo')
-            blackelo = format.get_tag(game_text, 'BlackElo')
-            roundnum = format.get_tag(game_text, 'Round')
-            eco = format.get_tag(game_text, 'ECO')
-            gamedate, date_val = format.get_date(game_text, 'Date')
-            gametime = format.get_tag(game_text, 'UTCTime')
-            result = format.get_result(game_text, 'Result')
-            site, gameid = format.get_sourceid(game_text, 'Site')
+            eventname = format.get_tag(game_text.headers.get('Event'))
+            whitelast, whitefirst = format.get_name(game_text.headers.get('White'))
+            blacklast, blackfirst = format.get_name(game_text.headers.get('Black'))
+            whiteelo = format.get_tag(game_text.headers.get('WhiteElo'))
+            blackelo = format.get_tag(game_text.headers.get('BlackElo'))
+            roundnum = format.get_tag(game_text.headers.get('Round'))
+            eco = format.get_tag(game_text.headers.get('ECO'))
+            dt_tag = 'Date' if game_text.headers.get('Date') is not None else 'UTCDate'  # old Lichess games are missing the Date tag, use UTCDate instead
+            gamedate, date_val = format.get_date(game_text.headers.get(dt_tag))
+            gametime = format.get_tag(game_text.headers.get('UTCTime'))
+            result = format.get_result(game_text.headers.get('Result'))
+            site, gameid = format.get_sourceid(game_text.headers.get('Site'), game_text.headers.get('Link'), game_text.headers.get('FICSGamesDBGameNo'))
             if not gameid:
                 gameid = seed
-            tmctrl = format.get_tag(game_text, 'TimeControl')
+            tmctrl = format.get_tag(game_text.headers.get('TimeControl'))
             if not tmctrl:
                 tmctrl = tmctrl_default
             incr = tmctrl[tmctrl.index('+')+1:len(tmctrl)].strip() if '+' in tmctrl else '0'

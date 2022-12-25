@@ -1,4 +1,3 @@
-import logging
 import re
 
 import chess.engine
@@ -50,20 +49,14 @@ def format_eval(eval):
     return rtn
 
 
-def get_date(game_text, tag):
-    tag_text = game_text.headers.get(tag)
+def get_date(tag_text):
     dte_arr = []
     dte = ''
     dte_val = None
 
-    # old Lichess games are missing the "Date" tag, use UTCDate instead
-    if not tag_text:
-        tag_text = game_text.headers.get('UTCDate')
-
     if tag_text:
         dte = tag_text
         if dte.find('??') > 0:  # replace any missing date parts
-            logging.warning(f'Missing date parts: {dte}')
             dte = dte.replace('??', '01')
         yr, mo = int(dte[0:4]), int(dte[5:7])
         if mo == 1:
@@ -78,8 +71,7 @@ def get_date(game_text, tag):
     return dte_arr
 
 
-def get_name(game_text, tag):
-    tag_text = game_text.headers.get(tag)
+def get_name(tag_text):
     ret_arr = []
     lname, fname = '', ''
 
@@ -96,10 +88,8 @@ def get_name(game_text, tag):
     return ret_arr
 
 
-def get_result(game_text, tag):
-    tag_text = game_text.headers.get(tag)
+def get_result(tag_text):
     res = ''
-
     if tag_text is not None:
         if tag_text == '1-0':
             res = '1.0'
@@ -107,35 +97,32 @@ def get_result(game_text, tag):
             res = '0.0'
         elif tag_text == '1/2-1/2':
             res = '0.5'
-
     return res
 
 
-def get_sourceid(game_text, tag):
-    tag_text = game_text.headers.get(tag)
+def get_sourceid(tag_text, cdc_text, fics_text):
     site_arr = []
     site, site_id = '', ''
 
     if tag_text is not None:
-        if tag_text.find('lichess', 0) >= 0:
+        if tag_text.lower().find('lichess', 0) >= 0:
             site = 'Lichess'
             site_id = tag_text.split('/')[-1]
-        elif tag_text.find('Chess.com', 0) >= 0:
+        elif tag_text.lower().find('chess.com', 0) >= 0:
             site = 'Chess.com'
-            lnk = game_text.headers.get('Link')
+            lnk = cdc_text
             if lnk is not None:
                 site_id = lnk.split('/')[-1]
         elif tag_text.find('FICS', 0) >= 0:
             site = 'FICS'
-            site_id = game_text.headers.get('FICSGamesDBGameNo')
+            site_id = fics_text
 
     site_arr.append(site)
     site_arr.append(site_id)
     return site_arr
 
 
-def get_tag(game_text, tag):
-    tag_text = game_text.headers.get(tag)
+def get_tag(tag_text):
     if not tag_text:
         tag_text = ''
     return tag_text
