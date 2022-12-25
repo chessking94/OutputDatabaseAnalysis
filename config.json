@@ -3,7 +3,8 @@
 	"enginePath": "C:/Users/eehunt/Documents/Chess/ENGINES",
 	"pgnName": "Test.pgn",
 	"timeControlDetailDefault": "5400+30",
-	"sourceName": "Test",
+	"isTheoryDefault": 10,
+	"sourceName": "Lichess",
 	"sourceParameters": {
 		"Personal": {
 			"depth": 15,
@@ -31,7 +32,7 @@
 		},
 		"Lichess": {
 			"depth": 11,
-			"engineName": "stockfish_11_x64.exe",
+			"engineName": "stockfish_14.1_x64.exe",
 			"seedGameID": false,
 			"useOpeningExplorer": false,
 			"useTablebaseExplorer": false,
