@@ -3,13 +3,13 @@ import logging
 import math
 import time
 
+from . import CONFIG_FILE
+from automation import misc
 import requests
-
-from func import get_conf
 
 
 def bookmoves(fen, date):
-    token_value = get_conf('LichessAPIToken')
+    token_value = misc.get_config('lichessAPIToken', CONFIG_FILE)
 
     base_url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=rapid,classical,correspondence&ratings=2000,2200,2500&fen='
     url = base_url + fen.replace(' ', '_')
@@ -43,7 +43,7 @@ def bookmoves(fen, date):
 
 
 def tbsearch(fen):
-    token_value = get_conf('LichessAPIToken')
+    token_value = misc.get_config('lichessAPIToken', CONFIG_FILE)
 
     base_url = 'http://tablebase.lichess.ovh/standard?fen='
     url = base_url + fen.replace(' ', '_')

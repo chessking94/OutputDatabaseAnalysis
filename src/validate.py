@@ -1,10 +1,10 @@
 import logging
 import os
 
+from . import CONFIG_FILE
+from automation import misc
 import pandas as pd
 import pyodbc as sql
-
-from func import get_conf
 
 
 def validate_depth(depth):
@@ -28,7 +28,7 @@ def validate_file(path, file):
 
 
 def validate_source(src):
-    conn_str = get_conf('SqlServerConnectionStringTrusted')
+    conn_str = misc.get_config('connectionString_chessDB', CONFIG_FILE)
     conn = sql.connect(conn_str)
     qry_text = 'SELECT SourceName FROM ChessWarehouse.dim.Sources'
     source_list = pd.read_sql(qry_text, conn).stack().tolist()

@@ -1,7 +1,3 @@
-import json
-import os
-
-
 def tbeval(tbdata):
     # returns #-n, #+n, #+nZ, and #-nZ
     if tbdata[1] is not None:  # DTM populated, takes priority
@@ -17,23 +13,6 @@ def tbeval(tbdata):
     return sc
 
 
-def get_conf(key):
-    fpath = r'C:\Users\eehunt\Repository'
-    fname = 'confidential.json'
-    with open(os.path.join(fpath, fname), 'r') as t:
-        key_data = json.load(t)
-    val = key_data.get(key)
-    return val
-
-
-def get_config(filepath, key):
-    filename = os.path.join(filepath, 'config.json')
-    with open(filename, 'r') as t:
-        key_data = json.load(t)
-    val = key_data.get(key)
-    return val
-
-
 def piececount(fen):
     end = fen.find(' ', 1)
     brd = fen[0:end]
@@ -42,10 +21,3 @@ def piececount(fen):
         if x.isalpha():
             ct = ct + 1
     return ct
-
-
-def get_parentdirs(path, levels):
-    rtn_path = path
-    for _ in range(levels):
-        rtn_path = os.path.dirname(rtn_path)
-    return rtn_path

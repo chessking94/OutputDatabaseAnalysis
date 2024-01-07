@@ -3,18 +3,18 @@ import datetime as dt
 import logging
 import os
 
+from automation import misc
 import chess
 import chess.engine
 import chess.pgn
 import pandas as pd
 import pyodbc as sql
 
+from . import CONFIG_FILE, DELIM
 from api import bookmoves, tbsearch
 import format
-from func import tbeval, piececount, get_conf, get_config, get_parentdirs
+from func import tbeval, piececount
 import validate as v
-
-DELIM = '\t'
 
 # TODO: Investigate the possibility of a move depth record; i.e. one that lists the top move/eval at a given depth
 # TODO: New game source for Chess.com and/or accounts closed as cheating
@@ -24,25 +24,23 @@ def main():
     logging.basicConfig(format='%(asctime)s\t%(funcName)s\t%(levelname)s\t%(message)s', level=logging.INFO)
     logging.info('START PROCESSING')
 
-    config_path = get_parentdirs(os.path.dirname(__file__), 1)
-
     # parameters
-    root_path = v.validate_path(get_config(config_path, 'rootPath'), 'root')
+    root_path = v.validate_path(misc.get_config('rootPath', CONFIG_FILE), 'root')
     pgn_path = os.path.join(root_path, 'PGN')
     output_path = os.path.join(root_path, 'Output')
-    engine_path = v.validate_path(get_config(config_path, 'enginePath'), 'engine')
-    pgn_name = v.validate_file(pgn_path, get_config(config_path, 'pgnName'))
-    source_name = v.validate_source(get_config(config_path, 'sourceName'))
+    engine_path = v.validate_path(misc.get_config('enginePath', CONFIG_FILE), 'engine')
+    pgn_name = v.validate_file(pgn_path, misc.get_config('pgnName', CONFIG_FILE))
+    source_name = v.validate_source(misc.get_config('sourceName', CONFIG_FILE))
 
-    source_params = get_config(config_path, 'sourceParameters')[source_name]
+    source_params = misc.get_config('sourceParameters', CONFIG_FILE)[source_name]
     d = v.validate_depth(source_params['depth'])
     engine_name = source_params['engineName']
     seed_gameid = source_params['seedGameID']
     openings = source_params['useOpeningExplorer']
     tblbase = source_params['useTablebaseExplorer']
     max_moves = v.validate_maxmoves(source_params['maxMoves'])
-    tmctrl_default = get_config(config_path, 'timeControlDetailDefault')
-    istheorydefault = get_config(config_path, 'isTheoryDefault')
+    tmctrl_default = misc.get_config('timeControlDetailDefault', CONFIG_FILE)
+    istheorydefault = misc.get_config('isTheoryDefault', CONFIG_FILE)
 
     # initiate engine
     eng = os.path.splitext(engine_name)[0]
@@ -50,7 +48,7 @@ def main():
 
     # get next game id value
     if seed_gameid:
-        conn_str = get_conf('SqlServerConnectionStringTrusted')
+        conn_str = misc.get_config('connectionString_chessDB', CONFIG_FILE)
         conn = sql.connect(conn_str)
         qry_text = f"""
 SELECT
