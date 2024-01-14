@@ -3,9 +3,10 @@ import logging
 import math
 import time
 
-from . import CONFIG_FILE
 from automation import misc
 import requests
+
+from constants import CONFIG_FILE
 
 
 def bookmoves(fen, date):

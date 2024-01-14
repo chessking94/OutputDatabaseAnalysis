@@ -1,10 +1,11 @@
 import logging
 import os
 
-from . import CONFIG_FILE
 from automation import misc
 import pandas as pd
 import pyodbc as sql
+
+from constants import CONFIG_FILE
 
 
 def validate_depth(depth):

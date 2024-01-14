@@ -10,8 +10,8 @@ import chess.pgn
 import pandas as pd
 import pyodbc as sql
 
-from . import CONFIG_FILE, DELIM
 from api import bookmoves, tbsearch
+from constants import CONFIG_FILE, DELIM
 import format
 from func import tbeval, piececount
 import validate as v
