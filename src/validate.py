@@ -3,7 +3,7 @@ import os
 
 from automation import misc
 import pandas as pd
-import pyodbc as sql
+import sqlalchemy as sa
 
 from constants import CONFIG_FILE
 
@@ -30,7 +30,12 @@ def validate_file(path, file):
 
 def validate_source(src):
     conn_str = misc.get_config('connectionString_chessDB', CONFIG_FILE)
-    conn = sql.connect(conn_str)
+    connection_url = sa.engine.URL.create(
+        drivername='mssql+pyodbc',
+        query={"odbc_connect": conn_str}
+    )
+    engine = sa.create_engine(connection_url)
+    conn = engine.connect().connection
     qry_text = 'SELECT SourceName FROM ChessWarehouse.dim.Sources'
     source_list = pd.read_sql(qry_text, conn).stack().tolist()
     conn.close()

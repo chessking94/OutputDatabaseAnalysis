@@ -8,7 +8,7 @@ import chess
 import chess.engine
 import chess.pgn
 import pandas as pd
-import pyodbc as sql
+import sqlalchemy as sa
 
 from api import bookmoves, tbsearch
 from constants import CONFIG_FILE, DELIM
@@ -49,7 +49,12 @@ def main():
     # get next game id value
     if seed_gameid:
         conn_str = misc.get_config('connectionString_chessDB', CONFIG_FILE)
-        conn = sql.connect(conn_str)
+        connection_url = sa.engine.URL.create(
+            drivername='mssql+pyodbc',
+            query={"odbc_connect": conn_str}
+        )
+        engine = sa.create_engine(connection_url)
+        conn = engine.connect().connection
         qry_text = f"""
 SELECT
 ISNULL(MAX(CAST(g.SiteGameID AS int)), 0) + 1
