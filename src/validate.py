@@ -35,10 +35,9 @@ def validate_source(src):
         query={"odbc_connect": conn_str}
     )
     engine = sa.create_engine(connection_url)
-    conn = engine.connect().connection
     qry_text = 'SELECT SourceName FROM ChessWarehouse.dim.Sources'
-    source_list = pd.read_sql(qry_text, conn).stack().tolist()
-    conn.close()
+    source_list = pd.read_sql(qry_text, engine).stack().tolist()
+    engine.dispose()
     if src not in source_list:
         logging.critical(f'Invalid game source {src} provided')
         raise SystemExit

@@ -54,7 +54,6 @@ def main():
             query={"odbc_connect": conn_str}
         )
         engine = sa.create_engine(connection_url)
-        conn = engine.connect().connection
         qry_text = f"""
 SELECT
 ISNULL(MAX(CAST(g.SiteGameID AS int)), 0) + 1
@@ -64,8 +63,8 @@ JOIN ChessWarehouse.dim.Sources src ON g.SourceID = src.SourceID
 
 WHERE src.SourceName = '{source_name}'
 """
-        seed = int(pd.read_sql(qry_text, conn).values[0][0])
-        conn.close()
+        seed = int(pd.read_sql(qry_text, engine).values[0][0])
+        engine.dispose()
     else:
         seed = 1
 
