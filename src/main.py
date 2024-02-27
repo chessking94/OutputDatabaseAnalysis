@@ -53,7 +53,7 @@ def main():
             drivername='mssql+pyodbc',
             query={"odbc_connect": conn_str}
         )
-        engine = sa.create_engine(connection_url)
+        qryengine = sa.create_engine(connection_url)
         qry_text = f"""
 SELECT
 ISNULL(MAX(CAST(g.SiteGameID AS int)), 0) + 1
@@ -63,8 +63,8 @@ JOIN ChessWarehouse.dim.Sources src ON g.SourceID = src.SourceID
 
 WHERE src.SourceName = '{source_name}'
 """
-        seed = int(pd.read_sql(qry_text, engine).values[0][0])
-        engine.dispose()
+        seed = int(pd.read_sql(qry_text, qryengine).values[0][0])
+        qryengine.dispose()
     else:
         seed = 1
 
