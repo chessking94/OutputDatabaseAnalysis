@@ -1,4 +1,6 @@
 {
+	"telegramAPIKey": "1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "telegramID": "9876543210",
 	"connectionString_chessDB": "Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=chessDB;UID=username;PWD=password;",
 	"lichessAPIToken": "abc_123456789",
 	"rootPath": "C:/chess/analysis",

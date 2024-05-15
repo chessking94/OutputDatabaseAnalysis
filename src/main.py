@@ -8,6 +8,7 @@ import chess
 import chess.engine
 import chess.pgn
 import pandas as pd
+import requests
 import sqlalchemy as sa
 
 from api import bookmoves, tbsearch
@@ -238,6 +239,18 @@ WHERE src.SourceName = '{source_name}'
 
     engine.quit()
     logging.info('END PROCESSING')
+
+    tg_api_key = misc.get_config('telegramAPIKey', CONFIG_FILE)
+    tg_id = misc.get_config('telegramID', CONFIG_FILE)
+    msg = f"Analysis for file '{pgn_name}' is complete!"
+    url = f'https://api.telegram.org/bot{tg_api_key}'
+    params = {'chat_id': tg_id, 'text': msg}
+    with requests.post(url + '/sendMessage', params=params) as resp:
+        cde = resp.status_code
+        if cde == 200:
+            logging.info('Telegram message sent successfully')
+        else:
+            logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
 
 
 if __name__ == '__main__':
