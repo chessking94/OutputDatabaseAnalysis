@@ -1,3 +1,4 @@
+import argparse
 import csv
 import datetime as dt
 import logging
@@ -23,16 +24,62 @@ import validate as v
 
 def main():
     logging.basicConfig(format='%(asctime)s\t%(funcName)s\t%(levelname)s\t%(message)s', level=logging.INFO)
+
+    vrs_num = '2.0'
+    parser = argparse.ArgumentParser(
+        description='Game Analyzer',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        usage=argparse.SUPPRESS
+    )
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version='%(prog)s ' + vrs_num
+    )
+    parser.add_argument(
+        '-p', '--pgn',
+        default=None,
+        nargs='?',
+        help='PGN name'
+    )
+    parser.add_argument(
+        '-s', '--source',
+        default=None,
+        nargs='?',
+        help='Source name'
+    )
+    parser.add_argument(
+        '-t', '--time',
+        default=None,
+        nargs='?',
+        help='Time control default'
+    )
+    parser.add_argument(
+        '-b', '--book',
+        default=None,
+        nargs='?',
+        help='Book move default'
+    )
+    args = parser.parse_args()
+    config = vars(args)
+
+    pgn_file = misc.get_config('pgnName', CONFIG_FILE) if config['pgn'] is None else config['pgn']
+
+    source_name = misc.get_config('sourceName', CONFIG_FILE) if config['source'] is None else config['source']
+    source_name = v.validate_source(source_name)
+
+    tmctrl_default = misc.get_config('timeControlDetailDefault', CONFIG_FILE) if config['time'] is None else config['time']
+
+    istheorydefault = misc.get_config('isTheoryDefault', CONFIG_FILE) if config['book'] is None else config['book']
+
     logging.info('START PROCESSING')
 
     # parameters
     root_path = v.validate_path(misc.get_config('rootPath', CONFIG_FILE), 'root')
     pgn_path = os.path.join(root_path, 'PGN')
     output_path = os.path.join(root_path, 'Output')
+    pgn_name = v.validate_file(pgn_path, pgn_file)
     engine_path = v.validate_path(misc.get_config('enginePath', CONFIG_FILE), 'engine')
-    pgn_name = v.validate_file(pgn_path, misc.get_config('pgnName', CONFIG_FILE))
-    source_name = v.validate_source(misc.get_config('sourceName', CONFIG_FILE))
-
     source_params = misc.get_config('sourceParameters', CONFIG_FILE)[source_name]
     d = v.validate_depth(source_params['depth'])
     engine_name = source_params['engineName']
@@ -40,8 +87,6 @@ def main():
     openings = source_params['useOpeningExplorer']
     tblbase = source_params['useTablebaseExplorer']
     max_moves = v.validate_maxmoves(source_params['maxMoves'])
-    tmctrl_default = misc.get_config('timeControlDetailDefault', CONFIG_FILE)
-    istheorydefault = misc.get_config('isTheoryDefault', CONFIG_FILE)
 
     # initiate engine
     eng = os.path.splitext(engine_name)[0]
@@ -59,8 +104,8 @@ def main():
 SELECT
 ISNULL(MAX(CAST(g.SiteGameID AS int)), 0) + 1
 
-FROM ChessWarehouse.lake.Games g
-JOIN ChessWarehouse.dim.Sources src ON g.SourceID = src.SourceID
+FROM lake.Games g
+JOIN dim.Sources src ON g.SourceID = src.SourceID
 
 WHERE src.SourceName = '{source_name}'
 """
