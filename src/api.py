@@ -4,10 +4,7 @@ import math
 import os
 import time
 
-from automation import misc
 import requests
-
-from constants import CONFIG_FILE
 
 
 def bookmoves(fen, date):
@@ -45,7 +42,7 @@ def bookmoves(fen, date):
 
 
 def tbsearch(fen):
-    token_value = misc.get_config('lichessAPIToken', CONFIG_FILE)
+    token_value = os.getenv('LichessAPIToken')
 
     base_url = 'http://tablebase.lichess.ovh/standard?fen='
     url = base_url + fen.replace(' ', '_')
