@@ -1,11 +1,8 @@
 import logging
 import os
 
-from automation import misc
 import pandas as pd
 import sqlalchemy as sa
-
-from constants import CONFIG_FILE
 
 
 def validate_depth(depth):
@@ -21,15 +18,15 @@ def validate_depth(depth):
     return depth
 
 
-def validate_file(path, file):
-    if not os.path.isfile(os.path.join(path, file)):
-        logging.critical(f'File {file} does not exist at {path}')
+def validate_file(file):
+    if not os.path.isfile(file):
+        logging.critical(f'File {os.path.basename(file)} does not exist at {os.path.dirname(file)}')
         raise SystemExit
     return file
 
 
 def validate_source(src):
-    conn_str = misc.get_config('connectionString_chessDB', CONFIG_FILE)
+    conn_str = os.getenv('ConnectionStringRelease')
     connection_url = sa.engine.URL.create(
         drivername='mssql+pyodbc',
         query={"odbc_connect": conn_str}

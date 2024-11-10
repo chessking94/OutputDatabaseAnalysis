@@ -1,8 +1,12 @@
-.venv
+# directories
 __pycache__
+/.venv
 /.vscode
 /old
+/src/migration
+/queries
+/output
+
+# files
 config.json
 test.py
-/src/migration
-queries

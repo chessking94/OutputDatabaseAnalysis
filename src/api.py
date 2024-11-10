@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import os
 import time
 
 from automation import misc
@@ -10,7 +11,7 @@ from constants import CONFIG_FILE
 
 
 def bookmoves(fen, date):
-    token_value = misc.get_config('lichessAPIToken', CONFIG_FILE)
+    token_value = os.getenv('LichessAPIToken')
 
     base_url = 'https://explorer.lichess.ovh/lichess?variant=standard&speeds=rapid,classical,correspondence&ratings=2000,2200,2500&fen='
     url = base_url + fen.replace(' ', '_')

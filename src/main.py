@@ -75,10 +75,9 @@ def main():
     logging.info('START PROCESSING')
 
     # parameters
-    root_path = v.validate_path(misc.get_config('rootPath', CONFIG_FILE), 'root')
-    pgn_path = os.path.join(root_path, 'PGN')
-    output_path = os.path.join(root_path, 'Output')
-    pgn_name = v.validate_file(pgn_path, pgn_file)
+    pgn_path = os.path.dirname(pgn_file)
+    pgn_name = os.path.basename(v.validate_file(pgn_file))
+    output_path = misc.get_config('outputPath', CONFIG_FILE)
     engine_path = v.validate_path(misc.get_config('enginePath', CONFIG_FILE), 'engine')
     source_params = misc.get_config('sourceParameters', CONFIG_FILE)[source_name]
     d = v.validate_depth(source_params['depth'])
@@ -94,7 +93,7 @@ def main():
 
     # get next game id value
     if seed_gameid:
-        conn_str = misc.get_config('connectionString_chessDB', CONFIG_FILE)
+        conn_str = os.getenv('ConnectionStringRelease')
         connection_url = sa.engine.URL.create(
             drivername='mssql+pyodbc',
             query={"odbc_connect": conn_str}
@@ -104,8 +103,8 @@ def main():
 SELECT
 ISNULL(MAX(CAST(g.SiteGameID AS int)), 0) + 1
 
-FROM lake.Games g
-JOIN dim.Sources src ON g.SourceID = src.SourceID
+FROM ChessWarehouse.lake.Games g
+JOIN ChessWarehouse.dim.Sources src ON g.SourceID = src.SourceID
 
 WHERE src.SourceName = '{source_name}'
 """
@@ -176,7 +175,8 @@ WHERE src.SourceName = '{source_name}'
                     movenum = board.fullmove_number
                     color = 'White' if board.turn else 'Black'
 
-                    logging.debug(f'{ctr} {seed} {color} {movenum}')
+                    if misc.get_config('loggingDetail', CONFIG_FILE):
+                        logging.info(f'{ctr} {seed} {color} {movenum}')
 
                     if istheory == 1:
                         if openings:
@@ -285,8 +285,8 @@ WHERE src.SourceName = '{source_name}'
     engine.quit()
     logging.info('END PROCESSING')
 
-    tg_api_key = misc.get_config('telegramAPIKey', CONFIG_FILE)
-    tg_id = misc.get_config('telegramID', CONFIG_FILE)
+    tg_api_key = os.getenv('TelegramAPIKeyRelease')
+    tg_id = os.getenv('TelegramChatIDRelease')
     msg = f"Analysis for file '{pgn_name}' is complete!"
     url = f'https://api.telegram.org/bot{tg_api_key}'
     params = {'chat_id': tg_id, 'text': msg}
