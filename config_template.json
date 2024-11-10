@@ -5,6 +5,7 @@
 	"isTheoryDefault": 10,
 	"enginePath": "C:/chess/engines",	
 	"outputPath": "C:/chess/output",
+	"loggingDetail": false,
 	"sourceParameters": {
 		"Personal": {
 			"depth": 15,
