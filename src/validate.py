@@ -26,7 +26,7 @@ def validate_file(file):
 
 
 def validate_source(src):
-    conn_str = os.getenv('ConnectionStringRelease')
+    conn_str = os.getenv('ConnectionStringOdbcRelease')
     connection_url = sa.engine.URL.create(
         drivername='mssql+pyodbc',
         query={"odbc_connect": conn_str}
