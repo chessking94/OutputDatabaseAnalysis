@@ -1,5 +1,5 @@
-automation @ file:///X:/Development/repo/Automation/release/automation-1.6.2.tar.gz#sha256=49edc09bad7c66478b8a9f5b141a920c29303fba3887aa834cc0db1cae7d4f4b
-chess==1.6.1
-pandas==1.3.1
-requests==2.26.0
-sqlalchemy==2.0.27
+chess>=1.6.1
+pandas>=1.3.1
+requests>=2.26.0
+sqlalchemy>=2.0.27
+Utilities_Python>=1.0.1
