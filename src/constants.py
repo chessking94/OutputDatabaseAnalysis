@@ -1,5 +1,5 @@
 import os
 from pathlib import Path
 
-CONFIG_FILE = os.path.join(Path(os.path.dirname(__file__)).parents[0], 'config.json')
+CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 DELIM = '\t'

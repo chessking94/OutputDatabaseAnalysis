@@ -1,11 +1,11 @@
 {
+	"logRoot": "C:/Logs",
 	"pgnName": "C:/chess/analysis/PGN/Test.pgn",
 	"sourceName": "Source1",
 	"timeControlDetailDefault": "5400+30",
 	"isTheoryDefault": 10,
 	"enginePath": "C:/chess/engines",	
 	"outputPath": "C:/chess/output",
-	"loggingDetail": false,
 	"sourceParameters": {
 		"Source1": {
 			"depth": 15,

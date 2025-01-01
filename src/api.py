@@ -29,13 +29,13 @@ def bookmoves(fen, date):
             else:
                 ct = ct + 1
                 if cde == 429:
-                    logging.info('API returned 429, waiting 65 seconds before trying again')
+                    logging.warning('API returned 429, waiting 65 seconds before trying again')
                     time.sleep(65)
                 else:
-                    logging.info(f'API returned {cde}, skipped FEN {fen}')
+                    logging.warning(f'API returned {cde}, skipped FEN {fen}')
 
             if ct == 5:  # exit ability to avoid infinite loop
-                logging.info('API rejected 5 consecutive times, skipping!')
+                logging.error(f'API rejected 5 consecutive times, skipped fee {fen}')
                 cde = 200
 
     return theory
@@ -114,13 +114,13 @@ def tbsearch(fen):
             else:
                 ct = ct + 1
                 if cde == 429:
-                    logging.info('API returned 429, waiting 65 seconds before trying again')
+                    logging.warning('API returned 429, waiting 65 seconds before trying again')
                     time.sleep(65)
                 else:
-                    logging.info(f'API returned {cde}, skipped FEN {fen}')
+                    logging.warning(f'API returned {cde}, skipped FEN {fen}')
 
             if ct == 5:  # exit ability to avoid infinite loop
-                logging.info('API rejected 5 consecutive times, skipping!')
+                logging.error(f'API rejected 5 consecutive times, skipped fee {fen}')
                 cde = 200
 
     return info

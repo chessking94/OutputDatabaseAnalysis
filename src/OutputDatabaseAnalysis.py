@@ -3,13 +3,13 @@ import csv
 import datetime as dt
 import logging
 import os
+from pathlib import Path
+import shutil
 
 import chess
 import chess.engine
 import chess.pgn
-import pandas as pd
-import requests
-import sqlalchemy as sa
+import pyodbc as sql
 from Utilities_Python import misc
 
 from api import bookmoves, tbsearch
@@ -18,14 +18,9 @@ import format
 from func import tbeval, piececount
 import validate as v
 
-# TODO: Investigate the possibility of a move depth record; i.e. one that lists the top move/eval at a given depth
-# TODO: New game source for Chess.com and/or accounts closed as cheating
-
 
 def main():
-    logging.basicConfig(format='%(asctime)s\t%(funcName)s\t%(levelname)s\t%(message)s', level=logging.INFO)
-
-    vrs_num = '2.0'
+    vrs_num = '3.0'
     parser = argparse.ArgumentParser(
         description='Game Analyzer',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -63,18 +58,18 @@ def main():
     args = parser.parse_args()
     config = vars(args)
 
-    pgn_file = misc.get_config('pgnName', CONFIG_FILE) if config['pgn'] is None else config['pgn']
+    # initiate logging
+    script_name = Path(__file__).stem
+    _ = misc.initiate_logging(script_name, CONFIG_FILE)
 
+    # overridable config values
+    pgn_file = misc.get_config('pgnName', CONFIG_FILE) if config['pgn'] is None else config['pgn']
     source_name = misc.get_config('sourceName', CONFIG_FILE) if config['source'] is None else config['source']
     source_name = v.validate_source(source_name)
-
     tmctrl_default = misc.get_config('timeControlDetailDefault', CONFIG_FILE) if config['time'] is None else config['time']
-
     istheorydefault = misc.get_config('isTheoryDefault', CONFIG_FILE) if config['book'] is None else config['book']
 
-    logging.info('START PROCESSING')
-
-    # parameters
+    # general parameters
     pgn_path = os.path.dirname(pgn_file)
     pgn_name = os.path.basename(v.validate_file(pgn_file))
     output_path = misc.get_config('outputPath', CONFIG_FILE)
@@ -92,26 +87,24 @@ def main():
     engine = chess.engine.SimpleEngine.popen_uci(os.path.join(engine_path, engine_name))
 
     # get next game id value
-    if seed_gameid:
+    if not seed_gameid:
+        seed = 1
+    else:
         conn_str = os.getenv('ConnectionStringOdbcRelease')
-        connection_url = sa.engine.URL.create(
-            drivername='mssql+pyodbc',
-            query={"odbc_connect": conn_str}
-        )
-        qryengine = sa.create_engine(connection_url)
-        qry_text = f"""
+        with sql.connect(conn_str) as conn:
+            with conn.cursor() as csr:
+                qry = """
 SELECT
 ISNULL(MAX(CAST(g.SiteGameID AS int)), 0) + 1
 
 FROM ChessWarehouse.lake.Games g
 JOIN ChessWarehouse.dim.Sources src ON g.SourceID = src.SourceID
 
-WHERE src.SourceName = '{source_name}'
+WHERE src.SourceName = ?
 """
-        seed = int(pd.read_sql(qry_text, qryengine).values[0][0])
-        qryengine.dispose()
-    else:
-        seed = 1
+                csr.execute(qry, source_name)
+                result = csr.fetchone()
+                seed = result[0] if result else 0
 
     # input/output stuff
     dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
@@ -156,7 +149,7 @@ WHERE src.SourceName = '{source_name}'
                 game_rec.append('')
 
             if whitelast == '' or blacklast == '':
-                logging.error(f'PGN game {ctr} was missing names and not processed!')
+                logging.error(f'PGN game #{ctr} was missing names and not processed!')
             else:
                 # GAME RECORD
                 with open(full_output, 'a', newline='') as f:
@@ -174,9 +167,6 @@ WHERE src.SourceName = '{source_name}'
                     fen = board.fen()
                     movenum = board.fullmove_number
                     color = 'White' if board.turn else 'Black'
-
-                    if misc.get_config('loggingDetail', CONFIG_FILE):
-                        logging.info(f'{ctr} {seed} {color} {movenum}')
 
                     if istheory == 1:
                         if openings:
@@ -276,26 +266,20 @@ WHERE src.SourceName = '{source_name}'
 
                     board.push(mv)
 
-                logging.info(f'Completed processing game {ctr} of {tot_gms}')
+                logging.info(f'Completed processing game {ctr} of {tot_gms} ({whitelast}-{blacklast})')
                 seed = seed + 1
 
             game_text = chess.pgn.read_game(pgn)
             ctr = ctr + 1
 
     engine.quit()
-    logging.info('END PROCESSING')
 
-    tg_api_key = os.getenv('TelegramAPIKeyRelease')
-    tg_id = os.getenv('TelegramChatIDRelease')
-    msg = f"Analysis for file '{pgn_name}' is complete!"
-    url = f'https://api.telegram.org/bot{tg_api_key}'
-    params = {'chat_id': tg_id, 'text': msg}
-    with requests.post(url + '/sendMessage', params=params) as resp:
-        cde = resp.status_code
-        if cde == 200:
-            logging.info('Telegram message sent successfully')
-        else:
-            logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
+    # move file to Archive directory if it exists
+    archive_path = os.path.join(pgn_path, 'Archive')
+    if os.path.isdir(archive_path):
+        proc_dte = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
+        new_filename = os.path.splitext(pgn_name)[0] + '_' + proc_dte + os.path.splitext(pgn_name)[1]
+        shutil.move(os.path.join(pgn_path, pgn_name), os.path.join(archive_path, new_filename))
 
 
 if __name__ == '__main__':
