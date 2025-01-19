@@ -1,26 +1,42 @@
 {
-	"logRoot": "C:/Logs",
-	"pgnName": "C:/chess/analysis/PGN/Test.pgn",
-	"sourceName": "Source1",
+	"logRoot": "$(PYTHON_LOG_ROOT)",
+	"pgnName": "",
+	"sourceName": "",
 	"timeControlDetailDefault": "5400+30",
 	"isTheoryDefault": 10,
-	"enginePath": "C:/chess/engines",	
-	"outputPath": "C:/chess/output",
+	"enginePath": "$(ENGINE_PATH)",
+	"outputPath": "$(OUTPUT_PATH)",
 	"sourceParameters": {
-		"Source1": {
+		"Personal": {
 			"depth": 15,
-			"engineName": "stockfish_11_x64.exe",
+			"engineName": "stockfish_12_x64.exe",
 			"seedGameID": true,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
 			"maxMoves": 32
 		},
-		"Source2": {
+		"PersonalOnline": {
 			"depth": 11,
-			"engineName": "stockfish_14.1_x64.exe",
+			"engineName": "stockfish_12_x64.exe",
 			"seedGameID": false,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
+			"maxMoves": 32
+		},
+		"Control": {
+			"depth": 11,
+			"engineName": "stockfish_12_x64.exe",
+			"seedGameID": true,
+			"useOpeningExplorer": true,
+			"useTablebaseExplorer": true,
+			"maxMoves": 32
+		},
+		"Lichess": {
+			"depth": 11,
+			"engineName": "stockfish_12_x64.exe",
+			"seedGameID": false,
+			"useOpeningExplorer": false,
+			"useTablebaseExplorer": false,
 			"maxMoves": 5
 		}
 	}

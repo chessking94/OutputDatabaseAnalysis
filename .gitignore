@@ -1,11 +1,11 @@
 # directories
 __pycache__
-/.venv
-/.vscode
-/old
-/src/migration
-/queries
-/output
+.venv/
+.vscode/
+old/
+src/migration
+queries/
+output/
 
 # files
 config.json

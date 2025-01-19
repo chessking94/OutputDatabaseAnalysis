@@ -1,0 +1,52 @@
+name: Publish OutputDatabaseAnalysis
+on:
+  push:
+    branches:
+      - master
+
+defaults:
+  run:
+    shell: powershell
+
+jobs:
+  publish:
+    runs-on: automate03-windows
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      # using setup-python is messy with locations
+      # - name: Install Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Initiate config file
+        run: copy config_template.json config.json
+
+      - name: Build config file
+        uses: cschleiden/replace-tokens@v1.3
+        with:
+          tokenPrefix: '$('
+          tokenSuffix: ')'
+          files: 'config.json'
+        env:
+          PYTHON_LOG_ROOT: ${{ vars.PYTHON_LOG_ROOT }}
+          ENGINE_PATH: ${{ vars.ENGINE_PATH }}
+          OUTPUT_PATH: ${{ vars.OUTPUT_PATH }}
+
+      - name: Deploy files
+        run: |
+          robocopy ${{ gitea.workspace }} ${{ vars.PUBLISH_DIR }} /MIR
+          $exitCode = $LASTEXITCODE
+          Write-Host "Robocopy exit code: $exitCode"
+          if ($exitCode -le 7) {
+            exit 0  # consider 0-7 as success per documentation
+          } else {
+            exit $exitCode
+          }
