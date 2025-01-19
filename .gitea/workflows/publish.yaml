@@ -42,7 +42,7 @@ jobs:
 
       - name: Deploy files
         run: |
-          robocopy ${{ gitea.workspace }} ${{ vars.PUBLISH_DIR }} /MIR
+          robocopy ${{ gitea.workspace }} ${{ vars.PUBLISH_DIR }} /MIR /xd .git
           $exitCode = $LASTEXITCODE
           Write-Host "Robocopy exit code: $exitCode"
           if ($exitCode -le 7) {
