@@ -6,6 +6,7 @@
 	"isTheoryDefault": 10,
 	"enginePath": "$(ENGINE_PATH)",
 	"outputPath": "$(OUTPUT_PATH)",
+	"eventRated": 1,
 	"sourceParameters": {
 		"Personal": {
 			"depth": 15,

@@ -16,3 +16,4 @@ G	14	Game Time
 G	15	Event Name
 G	16	Round Number
 G	17	Result
+G   18  Event Rated

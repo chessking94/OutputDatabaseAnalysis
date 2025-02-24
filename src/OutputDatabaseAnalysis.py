@@ -55,6 +55,12 @@ def main():
         nargs='?',
         help='Book move default'
     )
+    parser.add_argument(
+        '-r', '--rated',
+        default=None,
+        nargs='?',
+        help='Was event rated?'
+    )
     args = parser.parse_args()
     config = vars(args)
 
@@ -68,6 +74,7 @@ def main():
     source_name = v.validate_source(source_name)
     tmctrl_default = misc.get_config('timeControlDetailDefault', CONFIG_FILE) if config['time'] is None else config['time']
     istheorydefault = misc.get_config('isTheoryDefault', CONFIG_FILE) if config['book'] is None else config['book']
+    event_rated = misc.get_config('eventRated', CONFIG_FILE) if config['rated'] is None else config['rated']
 
     # general parameters
     pgn_path = os.path.dirname(pgn_file)
@@ -143,7 +150,7 @@ WHERE src.SourceName = ?
             game_rec = [
                 'G', source_name, site, gameid,
                 whitelast, whitefirst, blacklast, blackfirst, whiteelo, blackelo,
-                tmctrl, eco, gamedate, gametime, eventname, roundnum, result
+                tmctrl, eco, gamedate, gametime, eventname, roundnum, result, event_rated
             ]
             while len(game_rec) <= 79:
                 game_rec.append('')
