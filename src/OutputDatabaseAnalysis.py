@@ -117,7 +117,7 @@ WHERE src.SourceName = ?
     dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
     output_file = f'{os.path.splitext(pgn_name)[0]}_{dte}.game'
     full_pgn = os.path.join(pgn_path, pgn_name)
-    full_output = os.path.join(output_path, output_file)
+    full_output = os.path.join(pgn_path, output_file)
     with open(full_pgn, mode='r', encoding='utf-8') as gmct:
         tot_gms = 0
         search_text = '[Event "'
@@ -280,6 +280,9 @@ WHERE src.SourceName = ?
             ctr = ctr + 1
 
     engine.quit()
+
+    # move the analysis file to the final location
+    shutil.move(full_output, os.path.join(output_path, output_file))
 
     # move file to Archive directory if it exists
     archive_path = os.path.join(pgn_path, 'Archive')
