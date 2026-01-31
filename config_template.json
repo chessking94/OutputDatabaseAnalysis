@@ -10,7 +10,7 @@
 	"sourceParameters": {
 		"Personal": {
 			"depth": 15,
-			"engineName": "stockfish_12_x64.exe",
+			"engineFileName": "stockfish_12_x64.exe",
 			"seedGameID": true,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
@@ -18,7 +18,7 @@
 		},
 		"PersonalOnline": {
 			"depth": 11,
-			"engineName": "stockfish_12_x64.exe",
+			"engineFileName": "stockfish_12_x64.exe",
 			"seedGameID": false,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
@@ -26,7 +26,7 @@
 		},
 		"Control": {
 			"depth": 11,
-			"engineName": "stockfish_12_x64.exe",
+			"engineFileName": "stockfish_12_x64.exe",
 			"seedGameID": true,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
@@ -34,7 +34,7 @@
 		},
 		"Lichess": {
 			"depth": 11,
-			"engineName": "stockfish_12_x64.exe",
+			"engineFileName": "stockfish_12_x64.exe",
 			"seedGameID": false,
 			"useOpeningExplorer": false,
 			"useTablebaseExplorer": false,

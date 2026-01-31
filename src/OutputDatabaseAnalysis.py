@@ -83,15 +83,15 @@ def main():
     engine_path = v.validate_path(misc.get_config('enginePath', CONFIG_FILE), 'engine')
     source_params = misc.get_config('sourceParameters', CONFIG_FILE)[source_name]
     d = v.validate_depth(source_params['depth'])
-    engine_name = source_params['engineName']
+    engine_filename = source_params['engineFileName']
     seed_gameid = source_params['seedGameID']
     openings = source_params['useOpeningExplorer']
     tblbase = source_params['useTablebaseExplorer']
     max_moves = v.validate_maxmoves(source_params['maxMoves'])
 
     # initiate engine
-    eng = os.path.splitext(engine_name)[0]
-    engine = chess.engine.SimpleEngine.popen_uci(os.path.join(engine_path, engine_name))
+    engine = chess.engine.SimpleEngine.popen_uci(os.path.join(engine_path, engine_filename))
+    eng = engine.id['name']
 
     # get next game id value
     if not seed_gameid:
