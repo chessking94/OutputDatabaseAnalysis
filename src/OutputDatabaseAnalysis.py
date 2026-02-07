@@ -250,7 +250,7 @@ WHERE src.SourceName = ?
                         move_rank = max_moves + 1
 
                     t1_eval = eval_arr[0]
-                    if str(t1_eval).startswith('#') or str(move_eval).startswith('#') or istablebase:
+                    if str(t1_eval).startswith('#') or str(move_eval).startswith('#') or dp == 0:
                         cp_loss = ''
                     else:
                         cp_loss = '{:3.2f}'.format(abs(t1_eval - move_eval))
