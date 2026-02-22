@@ -10,7 +10,7 @@ defaults:
 
 jobs:
   publish:
-    runs-on: automate03-windows
+    runs-on: ${{ vars.DEFAULT_RUNNER_LABEL }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
