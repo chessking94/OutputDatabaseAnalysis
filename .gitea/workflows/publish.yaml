@@ -11,20 +11,11 @@ defaults:
 jobs:
   publish:
     runs-on: ${{ vars.DEFAULT_RUNNER_LABEL }}
+    env:
+      VENV_NAME: .venv
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-
-      # using setup-python is messy with locations
-      # - name: Install Python
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.13'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
 
       - name: Initiate config file
         run: copy config_template.json config.json
@@ -40,6 +31,12 @@ jobs:
           ENGINE_PATH: ${{ vars.ENGINE_PATH }}
           OUTPUT_PATH: ${{ vars.OUTPUT_PATH }}
 
+      - name: Clear old files
+        run: |
+          if (Test-Path "${{ vars.PUBLISH_DIR }}") {
+            Remove-Item -Path "${{ vars.PUBLISH_DIR }}" -Recurse -Force
+          }
+
       - name: Deploy files
         run: |
           robocopy ${{ gitea.workspace }} ${{ vars.PUBLISH_DIR }} /MIR /xd .git
@@ -50,3 +47,13 @@ jobs:
           } else {
             exit $exitCode
           }
+
+      - name: Create virtual environment
+        run: |
+          cd "${{ vars.PUBLISH_DIR }}"
+          python -m venv $env:VENV_NAME
+
+      - name: Install dependencies
+        run: |
+          cd "${{ vars.PUBLISH_DIR }}"
+          & "${{ vars.PUBLISH_DIR }}\$env:VENV_NAME\Scripts\pip.exe" install -r requirements.txt
