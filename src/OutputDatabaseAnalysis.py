@@ -1,6 +1,5 @@
 import argparse
 import csv
-import datetime as dt
 import logging
 import os
 from pathlib import Path
@@ -114,8 +113,7 @@ WHERE src.SourceName = ?
                 seed = result[0] if result else 0
 
     # input/output stuff
-    dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
-    output_file = f'{os.path.splitext(pgn_name)[0]}_{dte}.game'
+    output_file = f'{os.path.splitext(pgn_name)[0]}.game'  # change extension of output file from .pgn to .game
     full_pgn = os.path.join(pgn_path, pgn_name)
     full_output = os.path.join(pgn_path, output_file)
     with open(full_pgn, mode='r', encoding='utf-8') as gmct:
@@ -287,9 +285,7 @@ WHERE src.SourceName = ?
     # move file to Archive directory if it exists
     archive_path = os.path.join(pgn_path, 'Archive')
     if os.path.isdir(archive_path):
-        proc_dte = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
-        new_filename = os.path.splitext(pgn_name)[0] + '_' + proc_dte + os.path.splitext(pgn_name)[1]
-        shutil.move(os.path.join(pgn_path, pgn_name), os.path.join(archive_path, new_filename))
+        shutil.move(os.path.join(pgn_path, pgn_name), os.path.join(archive_path, pgn_name))
 
 
 if __name__ == '__main__':
