@@ -14,7 +14,7 @@
 			"seedGameID": true,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
-			"maxMoves": 32
+			"maxMoves": 10
 		},
 		"PersonalOnline": {
 			"depth": 11,
@@ -22,7 +22,7 @@
 			"seedGameID": false,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
-			"maxMoves": 32
+			"maxMoves": 10
 		},
 		"Control": {
 			"depth": 11,
@@ -30,7 +30,7 @@
 			"seedGameID": true,
 			"useOpeningExplorer": true,
 			"useTablebaseExplorer": true,
-			"maxMoves": 32
+			"maxMoves": 10
 		},
 		"Lichess": {
 			"depth": 11,

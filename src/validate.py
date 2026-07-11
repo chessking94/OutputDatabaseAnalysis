@@ -41,8 +41,8 @@ def validate_source(src):
 
 
 def validate_maxmoves(num):
-    if num > 32:
-        logging.critical(f"Max move count '{num}' greater than 32")
+    if num > 10:
+        logging.critical(f"Max move count '{num}' greater than 10")
         raise SystemExit
     return num
 

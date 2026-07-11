@@ -150,7 +150,7 @@ WHERE src.SourceName = ?
                 whitelast, whitefirst, blacklast, blackfirst, whiteelo, blackelo,
                 tmctrl, eco, gamedate, gametime, eventname, roundnum, result, event_rated
             ]
-            while len(game_rec) <= 79:
+            while len(game_rec) <= 35:
                 game_rec.append('')
 
             if whitelast == '' or blacklast == '':
@@ -261,7 +261,7 @@ WHERE src.SourceName = ?
                         move_rec.append(move_arr[i])
                         move_rec.append(eval_arr[i])
 
-                    while len(move_rec) <= 79:
+                    while len(move_rec) <= 35:
                         move_rec.append('')
 
                     # MOVE RECORD
